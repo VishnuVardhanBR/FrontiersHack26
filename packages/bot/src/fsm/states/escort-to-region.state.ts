@@ -1,6 +1,8 @@
 import { getCurrentRegion, getRegionCenter, say, transition } from "../helpers.js";
 import { TutorState } from "../tutor-fsm.js";
 
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const createEscortToRegionState = (): TutorState => ({
   name: "ESCORT_TO_REGION",
   async onEnter(ctx) {
@@ -17,6 +19,10 @@ export const createEscortToRegionState = (): TutorState => ({
       },
       "ESCORT_TO_REGION",
     );
+
+    if (region) {
+      await say(ctx, `Follow me to the ${region.purpose.replace(/_/g, " ")}.`);
+    }
   },
   async onTick(ctx) {
     const region = getCurrentRegion(ctx);
@@ -29,9 +35,10 @@ export const createEscortToRegionState = (): TutorState => ({
       return transition("NARRATE");
     }
 
-    await say(ctx, `Follow me to the ${region.purpose.replace(/_/g, " ")}.`);
     const player = ctx.memory.selectedPlayer ? ctx.playerTracker.getPlayer(ctx.memory.selectedPlayer) : null;
     await ctx.escort.escortPlayer(target, player?.position ?? null);
+    await say(ctx, "Here we are. Take a look around.");
+    await delay(1500);
     return transition("NARRATE");
   },
   async onChat() {

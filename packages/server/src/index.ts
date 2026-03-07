@@ -6,6 +6,7 @@ import { internalRouter } from "./routes/internal.js";
 import { sessionRouter } from "./routes/session.js";
 import { streamRouter } from "./routes/stream.js";
 import { uploadRouter } from "./routes/upload.js";
+import { voiceRouter } from "./routes/voice.js";
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.get("/health", (_req, res) => {
 app.use("/api/upload", uploadRouter);
 app.use("/api/sessions", sessionRouter);
 app.use("/api/sessions", streamRouter);
+app.use("/api", voiceRouter);
 app.use("/internal", internalRouter);
 
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

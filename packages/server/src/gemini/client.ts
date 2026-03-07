@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z, ZodFirstPartyTypeKind, type ZodTypeAny } from "zod";
 
 import { config } from "../config.js";
+import { log, warn, err } from "../log.js";
 
 type GeminiSchema = Record<string, unknown>;
 type GeminiErrorKind = "auth" | "invalid_request" | "model" | "quota" | "timeout" | "unknown";
@@ -197,17 +198,21 @@ export class GeminiClient {
     systemInstruction: string,
     userPrompt: string,
     schema: ZodTypeAny,
+    model?: string,
   ): Promise<unknown> {
     if (!this.client) {
       throw new Error("GEMINI_API_KEY is not configured.");
     }
 
+    const modelName = model ?? config.geminiModelPlanner;
     let lastError: GeminiRequestError | null = null;
 
     for (let attempt = 1; attempt <= config.geminiMaxAttempts; attempt += 1) {
+      log("gemini", `generateJSON attempt ${attempt}/${config.geminiMaxAttempts} model=${modelName}`);
+      const t0 = Date.now();
       try {
-        const model = this.client.getGenerativeModel({
-          model: config.geminiModel,
+        const generativeModel = this.client.getGenerativeModel({
+          model: modelName,
           systemInstruction,
           generationConfig: {
             responseMimeType: "application/json",
@@ -217,27 +222,26 @@ export class GeminiClient {
         });
 
         const result = await withTimeout(
-          model.generateContent(userPrompt),
+          generativeModel.generateContent(userPrompt),
           config.geminiTimeoutMs,
           "Gemini generateContent",
         );
         const text = stripJsonFences(result.response.text());
+        log("gemini", `generateJSON ok (${Date.now() - t0}ms) | response: ${text.length} chars`);
         return JSON.parse(text) as unknown;
       } catch (error) {
-        lastError = normalizeGeminiError(error, config.geminiModel);
-        console.error(`[Gemini] attempt ${attempt}/${config.geminiMaxAttempts} failed: ${lastError.message}`);
+        lastError = normalizeGeminiError(error, modelName);
+        warn("gemini", `attempt ${attempt} failed (${Date.now() - t0}ms): ${lastError.message}`);
 
-        if (lastError.rawMessage) {
-          console.error(`[Gemini] upstream detail: ${lastError.rawMessage}`);
+        if (lastError.rawMessage && lastError.rawMessage !== lastError.message) {
+          err("gemini", "upstream:", lastError.rawMessage);
         }
 
         if (!lastError.retryable || attempt >= config.geminiMaxAttempts) {
           break;
         }
 
-        if (attempt < config.geminiMaxAttempts) {
-          await delay(attempt * 500);
-        }
+        await delay(attempt * 500);
       }
     }
 
@@ -248,13 +252,59 @@ export class GeminiClient {
     systemInstruction: string,
     userPrompt: string,
     schema: z.ZodSchema<T>,
+    model?: string,
   ): Promise<T> {
     const json = await this.generateRawJSON(
       systemInstruction,
       userPrompt,
       schema as unknown as ZodTypeAny,
+      model,
     );
 
     return schema.parse(json);
+  }
+
+  async generateTTS(text: string): Promise<Buffer> {
+    if (!this.client) {
+      throw new Error("GEMINI_API_KEY is not configured.");
+    }
+
+    log("gemini", `tts: "${text.slice(0, 60)}${text.length > 60 ? "…" : ""}" | model: ${config.geminiModelVoice}`);
+    const t0 = Date.now();
+
+    const ttsModel = this.client.getGenerativeModel({
+      model: config.geminiModelVoice,
+    });
+
+    const result = await withTimeout(
+      ttsModel.generateContent({
+        contents: [{ role: "user", parts: [{ text }] }],
+        generationConfig: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: {
+                voiceName: "Aoede",
+              },
+            },
+          },
+        } as unknown as Record<string, unknown>,
+      }),
+      config.geminiTimeoutMs,
+      "Gemini TTS generateContent",
+    );
+
+    const candidate = result.response.candidates?.[0];
+    const audioPart = candidate?.content?.parts?.find(
+      (part) => (part as unknown as { inlineData?: { data: string; mimeType: string } }).inlineData,
+    ) as unknown as { inlineData?: { data: string; mimeType: string } } | undefined;
+
+    if (!audioPart?.inlineData?.data) {
+      throw new Error("No audio data returned from TTS model.");
+    }
+
+    const buf = Buffer.from(audioPart.inlineData.data, "base64");
+    log("gemini", `tts ok (${Date.now() - t0}ms) | audio: ${(buf.length / 1024).toFixed(1)} KB`);
+    return buf;
   }
 }

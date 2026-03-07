@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "dotenv": "^16.4.7",
     "minecraft-data": "^3.90.0",
     "mineflayer": "^4.35.0",

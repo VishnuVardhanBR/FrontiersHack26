@@ -118,6 +118,11 @@ export interface BuildSummary {
   walkabilityPassed: boolean;
 }
 
+export interface BuildResult {
+  buildPlan: BuildPlan;
+  buildSummary: BuildSummary;
+}
+
 export interface BuildProgressSnapshot {
   completedCommands: number;
   totalCommands: number;

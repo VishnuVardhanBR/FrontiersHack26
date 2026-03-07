@@ -150,23 +150,43 @@ export class SessionFileRepository {
     await fs.appendFile(this.getEventsPath(event.sessionId), `${JSON.stringify(this.toSharedEvent(event))}\n`);
   }
 
-  async listAvailableSessions(botUsername: string): Promise<SessionState[]> {
+  async listAvailableSessions(
+    botUsername: string,
+    options: { allowResumeIncomplete?: boolean } = {},
+  ): Promise<SessionState[]> {
     const ids = await this.listSessionIds();
     const sessions = await Promise.all(ids.map((id) => this.load(id)));
+    const allowResumeIncomplete = Boolean(options.allowResumeIncomplete);
+
+    // Staleness windows:
+    // "queued"       — teacher pressed Start Build; valid for 30 min in case the
+    //                  bot was briefly down when they clicked.
+    // mid-lesson     — bot crashed mid-lesson; only resume within 10 min so old
+    //                  sessions from previous runs never auto-restart.
+    const QUEUED_GRACE_MS     = 30 * 60 * 1000;
+    const MID_LESSON_GRACE_MS = 10 * 60 * 1000;
+    const now = Date.now();
+
+    const ageMs = (session: SessionState): number => {
+      const lastActive = Date.parse(session.updatedAt ?? session.createdAt ?? "");
+      return Number.isFinite(lastActive) ? now - lastActive : Infinity;
+    };
 
     return sessions
       .filter((session): session is SessionState => Boolean(session))
       .filter((session) => {
-        if (session.summary) {
+        if (session.summary) return false;
+        if (session.claimedBy && session.claimedBy !== botUsername) return false;
+
+        if (session.status === "queued") {
+          return ageMs(session) < QUEUED_GRACE_MS;
+        }
+
+        if (!allowResumeIncomplete) {
           return false;
         }
 
-        if (session.claimedBy && session.claimedBy !== botUsername) {
-          return false;
-        }
-
-        return [
-          "queued",
+        const resumableStates = [
           "building_scene",
           "waiting_for_player",
           "introducing",
@@ -176,7 +196,9 @@ export class SessionFileRepository {
           "evaluating_answer",
           "monitoring_objective",
           "climax_recap",
-        ].includes(session.status);
+        ];
+
+        return resumableStates.includes(session.status) && ageMs(session) < MID_LESSON_GRACE_MS;
       })
       .sort((left, right) => {
         const leftAt = Date.parse(left.updatedAt ?? left.createdAt ?? "");

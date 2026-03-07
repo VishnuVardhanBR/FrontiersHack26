@@ -24,8 +24,16 @@ export class BotBridgeService extends EventEmitter {
   async queueSession(sessionId: string): Promise<SessionState> {
     return this.updateStatus(
       sessionId,
+      "planned",
+      "Experience ready. Press 'Start Build' to launch the scene in Minecraft.",
+    );
+  }
+
+  async startSession(sessionId: string): Promise<SessionState> {
+    return this.updateStatus(
+      sessionId,
       "queued",
-      "Experience planned. Waiting for the tutor bot to claim the session.",
+      "Build started. The tutor bot will claim and construct the scene.",
     );
   }
 

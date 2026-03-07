@@ -1,6 +1,7 @@
 import type { Bot } from "mineflayer";
 
 import { BotConfig } from "../config.js";
+import { log, err } from "../log.js";
 import { SessionEvent, SessionState, ChatMessage, TutorStateName } from "../contracts.js";
 import { SessionFileRepository } from "../storage/session-file-repository.js";
 import { SessionTracker } from "../assessment/session-tracker.js";
@@ -36,6 +37,7 @@ export interface TutorMemory {
   objectiveStartedAt?: number | undefined;
   recapAsked: boolean;
   completed: boolean;
+  narrateCompletedAt?: number | undefined;
 }
 
 export interface TutorContext {
@@ -142,6 +144,7 @@ export class TutorFSM {
       return;
     }
 
+    log("fsm", `chat [${this.currentStateName}] ${username}: "${message}"`);
     await this.enqueue(async () => {
       const transition = await this.states[this.currentStateName].onChat(this.ctx, username, message);
       if (transition) {
@@ -152,12 +155,13 @@ export class TutorFSM {
 
   private async enqueue(task: () => Promise<void>): Promise<void> {
     this.queue = this.queue.then(task).catch((error) => {
-      console.error("[bot] fsm error", error);
+      err("fsm", "unhandled error in state", this.currentStateName, error);
     });
     await this.queue;
   }
 
   private async applyTransition(transition: StateTransition): Promise<void> {
+    log("fsm", `${this.currentStateName} → ${transition.to}`);
     await this.states[this.currentStateName].onExit(this.ctx);
     if (transition.patch) {
       this.ctx.memory = {

@@ -1,19 +1,40 @@
-import { BookOpenText, ChevronLeft, Pickaxe, ServerCrash } from 'lucide-react';
+import { BookOpenText, ChevronLeft, Pickaxe, Play, ServerCrash } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { ChatLog } from '@/components/ChatLog';
 import { SessionStatus } from '@/components/SessionStatus';
 import { SessionSummary } from '@/components/SessionSummary';
+import { VoicePanel } from '@/components/VoicePanel';
+import { useTTS } from '@/hooks/use-tts';
 import { useSession } from '@/hooks/use-session';
 import { useStream } from '@/hooks/use-stream';
+import { startSessionBuild } from '@/lib/api';
 import { humanize } from '@/lib/types';
 import { useQuizcraftStore } from '@/store';
 
 export const SessionPage = () => {
   const { id } = useParams<{ id: string }>();
-  const { session, isLoading, error } = useSession(id);
+  const { session, isLoading, error, refresh } = useSession(id);
   const { streamStatus, lastEventAt, error: streamError } = useStream(id);
   const streamEvents = useQuizcraftStore((store) => store.streamEvents);
+  const [isStarting, setIsStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  useTTS(streamEvents, true);
+
+  const handleStartBuild = async () => {
+    if (!id) return;
+    setIsStarting(true);
+    setStartError(null);
+    try {
+      await startSessionBuild(id);
+      await refresh();
+    } catch (e) {
+      setStartError(e instanceof Error ? e.message : 'Failed to start build');
+    } finally {
+      setIsStarting(false);
+    }
+  };
 
   if (!id) {
     return (
@@ -80,6 +101,31 @@ export const SessionPage = () => {
           </div>
         ) : null}
 
+        {session?.status === 'planned' ? (
+          <div className="rounded-[28px] border border-brass/20 bg-brass/8 px-5 py-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-basalt">Experience ready</p>
+                <p className="mt-0.5 text-sm text-basalt/72">
+                  The AI has planned the lesson. Click to build the Minecraft scene and launch the session.
+                </p>
+              </div>
+              <button
+                className="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-brass px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brass/90 disabled:opacity-50"
+                disabled={isStarting}
+                onClick={() => void handleStartBuild()}
+                type="button"
+              >
+                <Play className="h-4 w-4" />
+                {isStarting ? 'Starting…' : 'Start Build'}
+              </button>
+            </div>
+            {startError ? (
+              <p className="mt-2 text-xs text-ember">{startError}</p>
+            ) : null}
+          </div>
+        ) : null}
+
         <section className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
           <div className="space-y-4">
             {session ? (
@@ -101,7 +147,10 @@ export const SessionPage = () => {
             {session?.summary ? <SessionSummary summary={session.summary} /> : null}
           </div>
 
-          <ChatLog session={session} streamEvents={streamEvents} />
+          <div className="space-y-4">
+            <ChatLog session={session} streamEvents={streamEvents} />
+            {id ? <VoicePanel sessionId={id} /> : null}
+          </div>
         </section>
       </div>
     </main>

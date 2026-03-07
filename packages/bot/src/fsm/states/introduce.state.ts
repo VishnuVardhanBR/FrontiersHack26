@@ -4,7 +4,6 @@ import { TutorState } from "../tutor-fsm.js";
 export const createIntroduceState = (): TutorState => ({
   name: "INTRODUCE",
   async onEnter(ctx) {
-    ctx.memory.introStartedAt = Date.now();
     const experience = ctx.session.experiencePackage;
     await ctx.persistState(
       {
@@ -21,11 +20,13 @@ export const createIntroduceState = (): TutorState => ({
       `Welcome to ${experience.title}.`,
       experience.historicalSummary,
       `We are exploring ${experience.sceneSpec.theme}.`,
-      "Follow me, answer the chat questions, and type ready if you want to move sooner.",
+      "Follow me and answer the questions in chat.",
+      "Say 'ready' when you want to begin.",
     ]);
+    ctx.memory.introStartedAt = Date.now();
   },
   async onTick(ctx) {
-    if ((ctx.memory.introStartedAt ?? 0) + 10_000 <= Date.now()) {
+    if (ctx.memory.introStartedAt && Date.now() - ctx.memory.introStartedAt >= 15_000) {
       return transition("ESCORT_TO_REGION");
     }
     return null;

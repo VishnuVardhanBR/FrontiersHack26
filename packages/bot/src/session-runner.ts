@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
 import type { Bot } from "mineflayer";
+
+import { log, warn } from "./log.js";
 
 import { BotManager } from "./bot-manager.js";
 import { BotConfig } from "./config.js";
@@ -58,6 +62,7 @@ export class SessionRunner {
       return false;
     }
 
+    log("session", `claimed ${session.id} — "${session.experiencePackage?.title ?? "untitled"}"`);
     this.activeSessions.add(session.id);
 
     void this.runClaimedSession(claimed).finally(() => {
@@ -175,14 +180,49 @@ export class SessionRunner {
 
     this.options.manager.on("chat", onChat);
 
+    const stopVoicePoll = this.startVoicePoll(session.id, ctx, fsm);
+
     try {
+      log("session", `starting FSM for ${session.id}`);
       await fsm.start();
       while (!fsm.isCompleted()) {
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
+      log("session", `completed ${session.id}`);
     } finally {
+      stopVoicePoll();
       this.options.manager.off("chat", onChat);
       await fsm.stop();
     }
+  }
+
+  private startVoicePoll(
+    sessionId: string,
+    ctx: TutorContext,
+    fsm: TutorFSM,
+  ): () => void {
+    const voicePendingPath = path.join(this.options.config.storageRoot, sessionId, "voice-pending.txt");
+    let stopped = false;
+
+    const poll = async () => {
+      while (!stopped) {
+        try {
+          const transcript = await fs.readFile(voicePendingPath, "utf8");
+          await fs.unlink(voicePendingPath);
+          const username = ctx.memory.selectedPlayer ?? ctx.config.botUsername;
+          log("voice", `transcript from ${username}: "${transcript.trim().slice(0, 80)}"`);
+          await fsm.handleChat(username, transcript.trim());
+        } catch {
+          // File not present yet — normal
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+    };
+
+    void poll();
+    return () => {
+      stopped = true;
+    };
   }
 }

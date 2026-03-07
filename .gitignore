@@ -26,3 +26,4 @@ mc-server/world_the_end
 
 packages/frontend/.vite
 *.tsbuildinfo
+.logs/

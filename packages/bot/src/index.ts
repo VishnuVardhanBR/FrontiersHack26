@@ -32,7 +32,9 @@ const main = async (): Promise<void> => {
   await manager.connect();
 
   while (true) {
-    const available = await repository.listAvailableSessions(botConfig.botUsername);
+    const available = await repository.listAvailableSessions(botConfig.botUsername, {
+      allowResumeIncomplete: botConfig.resumeIncompleteSessions,
+    });
     const nextSession = botConfig.sessionId
       ? available.find((session) => session.id === botConfig.sessionId)
       : available[0];

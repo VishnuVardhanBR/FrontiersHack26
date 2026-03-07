@@ -5,6 +5,7 @@ import { ExperiencePackageSchema } from "./experience-package.js";
 
 export const SessionStatusSchema = z.enum([
   "planning",
+  "planned",
   "queued",
   "building_scene",
   "waiting_for_player",

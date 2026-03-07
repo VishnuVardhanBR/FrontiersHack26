@@ -1,8 +1,10 @@
 import type { Bot } from "mineflayer";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+import { botConfig } from "../config.js";
 import {
   BuildPlan,
+  BuildResult,
   BuildTemplatePlacement,
   ExperiencePackage,
   SessionState,
@@ -13,119 +15,139 @@ import { WalkabilityChecker } from "./walkability-checker.js";
 import { createItemChest, createSignPost, createTorchLine } from "./templates/decorations.js";
 import { createArch, createFlatPath, createRubblePile, createSimpleHouse, createWallSegment } from "./templates/structures.js";
 import { connectPointsWithPath, createAshPatch, createGroundPad } from "./templates/terrain.js";
+import { McpAgentBuilder } from "./mcp-agent-builder.js";
+import { GeminiDirectBuilder } from "./gemini-direct-builder.js";
 
 const SCENE_BUILDER_PROMPT = `
-You are QuizCraft Scene Planner. You are running as an agent inside a local Minecraft tutoring app.
-You are an expert in historical storytelling, visual 3D design, and playable Minecraft layout planning.
+You are QuizCraft Scene Planner. You convert a historical learning package into a compact Minecraft build plan using a fixed template library.
 
-# General
-- You convert one historical learning package into a compact Minecraft build plan.
-- You do not write Python code or raw block-by-block commands.
-- You return raw JSON only for QuizCraft's template-based builder.
-- The student will walk through this world with a Minecraft character while a tutor bot narrates and asks questions.
-- It is critical that the scene be visually readable, historically evocative, compact, and fully traversable.
+Your job is not to make a symbolic or generic layout. Your job is to make the world feel lived-in, spatially believable, and visually cinematic while staying playable in Minecraft.
 
-# Output Contract
+# PRIMARY GOAL
+Create a scene that feels dynamic, realistic, and grounded in the source material.
+The build should look like a real place shaped by human activity, terrain, time, and events, not a line of evenly spaced props.
+
+# SOURCE FIDELITY (highest priority)
+Read "historicalSummary" and "sceneSpec.theme" first.
+Every major visual choice must match the historical setting.
+Each region's "buildDirectives" tells you what to build there — follow it.
+Use "historicalSummary", "sourceExcerpt", region descriptions, and theme to infer:
+- architecture style
+- density of structures
+- level of damage or preservation
+- circulation paths
+- where landmarks should sit
+- how the environment changes from region to region
+
+# REALISM RULES
+Design like a believable location, not a toy map.
+
+1. Spatial realism
+- Vary region sizes and spacing naturally
+- Do not make every region the same shape, scale, or density
+- Important landmarks should anchor space and be visible from nearby paths
+- Buildings should face paths, plazas, or open space when appropriate
+- Use wall segments, arches, rubble, and houses to imply districts, boundaries, courtyards, forums, streets, markets, or ruins
+
+2. Environmental storytelling
+- The scene should show cause and effect
+- If the theme includes disaster, invasion, decline, eruption, or destruction, later regions should visibly reflect escalation
+- Add rubble_pile placements where collapse, damage, debris, or abandonment would naturally occur
+- Preserve contrast between intact and damaged spaces
+- Make the final region feel climactic
+
+3. Dynamic progression
+- The player should feel forward movement through changing environments
+- Early regions should introduce the setting
+- Middle regions should increase complexity, density, or tension
+- Final region should feel visually strongest, most important, or most damaged depending on the topic
+- Avoid repetitive copy-paste placement patterns
+
+4. Path realism
+- Paths should connect regions logically, like roads or walkways people would actually use
+- Slight asymmetry is good
+- Regions should branch visually around the path, not all sit in the exact same relative position
+- Keep paths foot-traversable and clear, but avoid making the whole scene feel mechanically gridded
+
+# BLOCK PALETTE GUIDANCE
+Choose palette blocks that match the setting and mood.
+
+- Roman / Mediterranean city  → palette: ["minecraft:cut_sandstone","minecraft:stone_bricks","minecraft:orange_terracotta","minecraft:quartz_block"]
+- Medieval European           → palette: ["minecraft:stone_bricks","minecraft:oak_planks","minecraft:cobblestone","minecraft:dark_oak_log"]
+- Ancient Egypt / desert      → palette: ["minecraft:sandstone","minecraft:cut_sandstone","minecraft:chiseled_sandstone","minecraft:smooth_sandstone"]
+- Volcanic / disaster scene   → palette: ["minecraft:blackstone","minecraft:basalt","minecraft:cobblestone","minecraft:gray_concrete_powder"]
+- Forest / nature             → palette: ["minecraft:moss_block","minecraft:oak_log","minecraft:coarse_dirt","minecraft:cobblestone"]
+
+Prefer palettes that reinforce realism:
+- intact civic or sacred zones can use cleaner blocks
+- damaged zones can use darker, rougher, or dustier blocks
+- do not choose a palette that fights the historical setting
+
+# OUTPUT CONTRACT
 Return raw JSON only with these keys:
 - theme: string
-- palette: string[]
+- palette: string[]  (4 blocks that match the setting above)
 - spawnPoint: { x:number, y:number, z:number }
 - regionCenters: object keyed by region id with { x:number, y:number, z:number }
 - placements: array of { template, origin, size?, palette?, metadata? }
 - objectivePlacement: { position, itemName, narrativeLabel }
 
-Only use these templates:
-- flat_path
-- simple_house
-- wall_segment
-- sign_post
-- torch_line
-- item_chest
-- arch
-- rubble_pile
+# LAYOUT CONSTRAINTS
+Keep the full scene within a 100x100x100 area around spawn (x/z -50 to 50).
+Use itemName from studentObjective.itemName for objectivePlacement.
 
-Keep the full scene within a 100x100x100 area around spawn.
-Prefer valid Minecraft item ids for objectivePlacement.itemName, such as paper, book, map, compass, diamond, emerald, or gold_ingot.
+# LAYOUT RULES
+- Regions should generally progress forward through the world, but do not force perfect symmetry
+- Typical spacing between successive regions should be about 16-26 blocks, adjusted based on importance
+- Connect every adjacent pair of regions with a flat_path
+- Place a sign_post at each region center with text from the region description
+- Put the item_chest only at the final region
+- First region should usually have an arch as an entrance gate or threshold marker
+- Disaster or destruction themes should include more rubble_pile placements in later regions than earlier ones
+- Use multiple structures in important regions when appropriate by adding more than one placement
+- Major regions may include combinations like:
+  - arch + wall_segment
+  - simple_house + wall_segment
+  - simple_house + rubble_pile
+  - arch + rubble_pile
+- Do not make every region contain the exact same template mix
 
-# Build Categories
-Before planning, decide which category the learning package most closely matches:
+# PLAYABILITY
+- Every region must be reachable on foot from spawn
+- No jumps greater than 1 block
+- Clear 2-block-wide walking path between regions
+- Do not block the main route with structures or rubble
+- Keep the objective reachable
 
-## Category A: Symbolic Landmark Vignette
-- Use when a region is mainly a memorable icon, monument, gate, ruin fragment, or focal prop
-- Focus on strong silhouette and immediate readability
-- Do not overbuild empty surroundings
+# COMPOSITION GUIDANCE
+Aim for scenes that feel like real places:
+- create sightlines toward major landmarks
+- cluster related structures instead of scattering them randomly
+- leave some open space for plazas, streets, or courtyards
+- use denser placement in important urban areas
+- use more emptiness where appropriate for damage, abandonment, or outskirts
+- later regions should feel visually transformed if the historical moment involves crisis
 
-## Category B: Structure In Context
-- Use when the package implies homes, markets, villas, forums, bridges, streets, or other built spaces
-- The structure should sit inside a readable environment with paths, walls, props, and approach routes
-- The student should understand how people might have used the space
-
-## Category C: Narrative Walkthrough Scene
-- Use when the package is about moving through multiple historical beats
-- Build the scene as a guided sequence: arrival, context, tension, climax, recap
-- Each region should communicate one distinct teaching moment
-
-# Playability Requirements
-For this project, you are not making a static model. You are creating a playable teaching space.
-
-## Core Accessibility Rules
-- Every region center must be reachable on foot from spawn
-- Prefer straight, obvious routes over maze-like layouts
-- Paths should feel intentional and safe, not decorative only
-- Avoid jumps taller than 1 block in the intended student route
-- Keep open walking space around landmarks so the tutor bot can escort the player comfortably
-- If a platform or overlook exists, include a clear way up and down
-
-## Stair and Elevation Guidance
-- Default to straight Minecraft stairs when vertical movement is needed
-- Use gentle 1-block rises, stairs, or short ramps
-- Avoid spiral stairs unless the space is extremely tight
-- Elevated areas should exist only if the player can reach them naturally
-
-## Terrain Playability
-- Use gradual slopes, short rises, and clear paths
-- Do not trap the player behind rubble, walls, or decorative clutter
-- If ash, debris, or ruins are part of the theme, keep the teaching route clear through them
-
-# Structural Design Principles
-## Physical Connectivity
-- Every planned structure or prop cluster must feel anchored to the scene
-- No floating pieces with no visible support
-- Use walls, arches, paths, and rubble to connect regions into one cohesive route
-
-## Material Variety
-- Never rely on a single block family for the whole scene
-- Use contrast between foundations, pathing, trim, ruins, and focal landmarks
-- Keep the palette compact, but not monotonous
-
-## Defining Features
-- Each region should have one dominant visual cue that matches the lesson content
-- Use signs, arches, wall fragments, houses, and rubble to imply history without needing a giant build
-- Favor symbolic clarity over massive realism
-
-# Educational Scene Rules
-- The full scene should support a 5 to 7 minute guided lesson
-- Use 3 to 5 regions and make each one visually distinct
-- Reserve the final region for the objective item chest
-- Make the first region legible from spawn so the student immediately knows where to go
-- Reinforce the chapter's main facts through environmental storytelling
-- If the package mentions a disaster, battle, or transformation, reflect that progression visually across the route
-
-# Common Mistakes To Avoid
-- Oversized cities that dilute the lesson
-- Empty plazas with no focal teaching landmark
-- Decorative routes that are not clearly walkable
-- Repeating the same structure in every region
-- Hiding the objective chest in a frustrating or inaccessible location
-- Planning details that require templates or geometry not supported by the allowed template list
+# EXAMPLE OF GOOD PLANNING LOGIC
+For Pompeii:
+- early region could feel like an intact Roman approach
+- middle regions could show forum, villas, streets, and civic space
+- later regions could show ash, rubble, damage, and looming volcanic impact
+- final region should feel climactic and dangerous, not just like another repeated district
 
 Return JSON only. Do not include markdown fences or explanation.
 `;
 
+
 const parseJsonBlock = (value: string): unknown => {
   const fenced = value.match(/```json\s*([\s\S]*?)```/i);
-  const source = fenced ? fenced[1] : value;
-  return JSON.parse(source);
+  const source = (fenced ? fenced[1] : value).trim();
+  const start = source.indexOf("{");
+  const end = source.lastIndexOf("}");
+  if (start < 0 || end <= start) {
+    throw new Error("SceneBuilder: Gemini response did not include a JSON object.");
+  }
+  return JSON.parse(source.slice(start, end + 1));
 };
 
 const makeCenterLine = (experience: ExperiencePackage): Record<string, Vector3Like> => {
@@ -141,15 +163,20 @@ const makeCenterLine = (experience: ExperiencePackage): Record<string, Vector3Li
   );
 };
 
-export interface BuildResult {
-  buildPlan: BuildPlan;
-  buildSummary: {
-    commandCount: number;
-    fillCount: number;
-    setblockCount: number;
-    walkabilityPassed: boolean;
-  };
-}
+const WORLD_MODEL_FALLBACKS = ["gemini-2.5-flash", "gemini-2.0-flash"] as const;
+
+const worldModelCandidates = (preferredModel: string): string[] => {
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+  for (const model of [preferredModel, ...WORLD_MODEL_FALLBACKS]) {
+    if (!model || seen.has(model)) {
+      continue;
+    }
+    seen.add(model);
+    candidates.push(model);
+  }
+  return candidates;
+};
 
 export class SceneBuilder {
   async buildScene(
@@ -158,27 +185,19 @@ export class SceneBuilder {
     apiKey: string | undefined,
     onProgress?: (value: number) => Promise<void> | void,
   ): Promise<BuildResult> {
-    const buildPlan = await this.generateBuildPlan(session, apiKey);
-    const placer = new BlockPlacer(bot);
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is required. Refusing to build with template fallback.");
+    }
 
-    await onProgress?.(0.05);
-    await placer.clearArea(buildPlan.clearBounds.min, buildPlan.clearBounds.max);
-
-    const placements = this.expandPlacements(buildPlan, session.experiencePackage);
-    const stats = await placer.placeBlocks(placements, async (value) => {
-      await onProgress?.(0.05 + value * 0.85);
-    });
-
-    const walkabilityPassed = await new WalkabilityChecker(bot).verify(Object.values(buildPlan.regionCenters));
-    await onProgress?.(1);
-
-    return {
-      buildPlan,
-      buildSummary: {
-        ...stats,
-        walkabilityPassed,
-      },
-    };
+    console.log("[bot] GeminiDirectBuilder: starting");
+    const directResult = await new GeminiDirectBuilder().build(
+      bot,
+      session.experiencePackage,
+      apiKey,
+      async (value) => { await onProgress?.(value); },
+    );
+    console.log("[bot] GeminiDirectBuilder: complete", directResult.buildSummary);
+    return directResult;
   }
 
   private async generateBuildPlan(session: SessionState, apiKey: string | undefined): Promise<BuildPlan> {
@@ -195,29 +214,48 @@ export class SceneBuilder {
 
   private async generateWithGemini(experience: ExperiencePackage, apiKey: string): Promise<BuildPlan> {
     const client = new GoogleGenerativeAI(apiKey);
-    const model = client.getGenerativeModel({ model: "gemini-3-flash-preview" });
+    const sourceExcerpt = (experience as unknown as Record<string, unknown>).sourceExcerpt;
     const prompt = [
       SCENE_BUILDER_PROMPT.trim(),
       "",
+      ...(sourceExcerpt ? [`Source text (build visuals that match this):\n${String(sourceExcerpt)}`, ""] : []),
       "Experience package:",
       JSON.stringify(experience, null, 2),
     ].join("\n");
-
-    const result = await model.generateContent(prompt);
-    const parsed = parseJsonBlock(result.response.text()) as Partial<BuildPlan>;
     const fallback = this.generateFallbackPlan(experience);
+    let lastError: unknown;
 
-    return {
-      ...fallback,
-      ...parsed,
-      clearBounds: parsed.clearBounds ?? fallback.clearBounds,
-      spawnPoint: parsed.spawnPoint ?? fallback.spawnPoint,
-      palette: Array.isArray(parsed.palette) && parsed.palette.length > 0 ? parsed.palette.map(String) : fallback.palette,
-      placements: Array.isArray(parsed.placements) && parsed.placements.length > 0 ? parsed.placements : fallback.placements,
-      regionCenters:
-        parsed.regionCenters && Object.keys(parsed.regionCenters).length > 0 ? parsed.regionCenters : fallback.regionCenters,
-      objectivePlacement: parsed.objectivePlacement ?? fallback.objectivePlacement,
-    };
+    for (const modelName of worldModelCandidates(botConfig.geminiModelWorld)) {
+      try {
+        const model = client.getGenerativeModel({
+          model: modelName,
+          generationConfig: {
+            responseMimeType: "application/json",
+          },
+        });
+        const result = await model.generateContent(prompt);
+        const parsed = parseJsonBlock(result.response.text()) as Partial<BuildPlan>;
+
+        return {
+          ...fallback,
+          ...parsed,
+          clearBounds: parsed.clearBounds ?? fallback.clearBounds,
+          spawnPoint: parsed.spawnPoint ?? fallback.spawnPoint,
+          palette: Array.isArray(parsed.palette) && parsed.palette.length > 0 ? parsed.palette.map(String) : fallback.palette,
+          placements: Array.isArray(parsed.placements) && parsed.placements.length > 0 ? parsed.placements : fallback.placements,
+          regionCenters:
+            parsed.regionCenters && Object.keys(parsed.regionCenters).length > 0 ? parsed.regionCenters : fallback.regionCenters,
+          objectivePlacement: parsed.objectivePlacement ?? fallback.objectivePlacement,
+        };
+      } catch (error) {
+        lastError = error;
+        console.warn(`[bot] scene plan model ${modelName} failed`, error);
+      }
+    }
+
+    throw lastError instanceof Error
+      ? lastError
+      : new Error("SceneBuilder: all world models failed to generate a valid build plan.");
   }
 
   private generateFallbackPlan(experience: ExperiencePackage): BuildPlan {

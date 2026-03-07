@@ -62,6 +62,12 @@ export const createBuildSceneState = (): TutorState => ({
         buildSummary: result.buildSummary,
       };
       ctx.memory.buildComplete = true;
+
+      // Point the world spawn at the build's spawn so players land there on join/respawn.
+      const sp = result.buildPlan.spawnPoint;
+      ctx.bot.chat(`/setworldspawn ${sp.x} ${sp.y} ${sp.z}`);
+      ctx.bot.chat(`/spawnpoint @a ${sp.x} ${sp.y} ${sp.z}`);
+
       await ctx.persistState(
         {
           status: "waiting_for_player",
@@ -83,11 +89,27 @@ export const createBuildSceneState = (): TutorState => ({
       );
       return transition("WAIT_FOR_PLAYER");
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       await ctx.emitEvent("error", {
         state: "BUILD_SCENE",
-        message: error instanceof Error ? error.message : String(error),
+        message,
       });
-      throw error;
+      await ctx.emitEvent("status", {
+        status: "error",
+        message,
+      });
+      await ctx.persistState(
+        {
+          status: "error",
+          runtime: {
+            ...ctx.session.runtime,
+            currentState: "BUILD_SCENE",
+          },
+        },
+        "BUILD_SCENE",
+      );
+      ctx.memory.completed = true;
+      return null;
     } finally {
       ctx.memory.buildInFlight = false;
     }

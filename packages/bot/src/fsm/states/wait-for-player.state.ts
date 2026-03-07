@@ -15,17 +15,24 @@ export const createWaitForPlayerState = (): TutorState => ({
       },
       "WAIT_FOR_PLAYER",
     );
-    await say(ctx, "Scene ready. Walk near me to begin the history tour.");
+
+    const spawn = ctx.session.buildPlan?.spawnPoint ?? { x: 0, y: 4, z: 0 };
+    ctx.bot.chat(`/tp @s ${spawn.x} ${spawn.y} ${spawn.z}`);
+    await say(ctx, "Scene ready. Join when you like — I'll bring you to the start.");
   },
   async onTick(ctx) {
     const player = ctx.playerTracker.getNearestPlayer();
-    if (player && player.distance <= 10) {
-      return transition("INTRODUCE", {
-        selectedPlayer: player.username,
-      });
+    if (!player) {
+      return null;
     }
 
-    return null;
+    // Teleport the player to the build's spawn point so they land right in the world.
+    const spawn = ctx.session.buildPlan?.spawnPoint ?? { x: 0, y: 4, z: 0 };
+    ctx.bot.chat(`/tp ${player.username} ${spawn.x} ${spawn.y} ${spawn.z}`);
+
+    return transition("INTRODUCE", {
+      selectedPlayer: player.username,
+    });
   },
   async onChat() {
     return null;

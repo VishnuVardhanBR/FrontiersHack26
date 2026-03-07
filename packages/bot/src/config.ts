@@ -1,13 +1,32 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { config as loadEnv } from "dotenv";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const packageDir = path.resolve(currentDir, "..");
 const repoRoot = path.resolve(packageDir, "..", "..");
 
+// Load root .env explicitly so workspace scripts started from packages/bot
+// still receive repo-level environment variables.
+loadEnv({ path: path.resolve(repoRoot, ".env") });
+
 const parseNumber = (value: string | undefined, fallback: number) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const parseBoolean = (value: string | undefined, fallback: boolean) => {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+  return fallback;
 };
 
 export interface BotConfig {
@@ -21,6 +40,8 @@ export interface BotConfig {
   readonly tickIntervalMs: number;
   readonly routeRadius: number;
   readonly geminiApiKey?: string;
+  readonly geminiModelWorld: string;
+  readonly resumeIncompleteSessions: boolean;
   readonly sessionId?: string;
 }
 
@@ -35,5 +56,7 @@ export const botConfig: BotConfig = {
   tickIntervalMs: parseNumber(process.env.QUIZCRAFT_TICK_MS, 500),
   routeRadius: parseNumber(process.env.QUIZCRAFT_ROUTE_RADIUS, 4),
   geminiApiKey: process.env.GEMINI_API_KEY,
+  geminiModelWorld: process.env.GEMINI_MODEL_WORLD ?? "gemini-2.0-flash",
+  resumeIncompleteSessions: parseBoolean(process.env.QUIZCRAFT_RESUME_INCOMPLETE_SESSIONS, false),
   sessionId: process.env.QUIZCRAFT_SESSION_ID,
 };

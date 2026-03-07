@@ -15,6 +15,7 @@ import {
 
 import { config } from "../config.js";
 import { GeminiClient } from "../gemini/client.js";
+import { log, warn } from "../log.js";
 
 export interface PlanExperienceInput {
   sessionId: string;
@@ -181,7 +182,7 @@ const repairExperiencePackage = (raw: unknown, fallback: ExperiencePackage): Exp
       } satisfies QuestionPlan;
     });
 
-  const dialoguePlan = (rawDialogue.length > 0 ? rawDialogue : fallback.dialoguePlan)
+  const mappedDialoguePlan = (rawDialogue.length > 0 ? rawDialogue : fallback.dialoguePlan)
     .slice(0, Math.max(3, regions.length))
     .map((dialogue, index) => {
       const value = asRecord(dialogue);
@@ -199,7 +200,15 @@ const repairExperiencePackage = (raw: unknown, fallback: ExperiencePackage): Exp
       } satisfies DialogueBeat;
     });
 
-  const triggerPlan = (rawTriggers.length > 0 ? rawTriggers : fallback.triggerPlan)
+  // Schema requires at least 3 dialogue beats.
+  const dialoguePlan: ExperiencePackage["dialoguePlan"] = mappedDialoguePlan.length >= 3
+    ? mappedDialoguePlan
+    : [
+        ...mappedDialoguePlan,
+        ...fallback.dialoguePlan.slice(mappedDialoguePlan.length, 3),
+      ];
+
+  const mappedTriggerPlan = (rawTriggers.length > 0 ? rawTriggers : fallback.triggerPlan)
     .slice(0, 5)
     .map((trigger, index) => {
       const value = asRecord(trigger);
@@ -217,7 +226,15 @@ const repairExperiencePackage = (raw: unknown, fallback: ExperiencePackage): Exp
       } satisfies TriggerPlan;
     });
 
-  const successConditions = (rawSuccessConditions.length > 0 ? rawSuccessConditions : fallback.successConditions)
+  // Schema requires at least 2 triggers.
+  const triggerPlan: ExperiencePackage["triggerPlan"] = mappedTriggerPlan.length >= 2
+    ? mappedTriggerPlan
+    : [
+        ...mappedTriggerPlan,
+        ...fallback.triggerPlan.slice(mappedTriggerPlan.length, 2),
+      ];
+
+  const mappedSuccessConditions = (rawSuccessConditions.length > 0 ? rawSuccessConditions : fallback.successConditions)
     .slice(0, 5)
     .map((condition, index) => {
       if (typeof condition === "string") {
@@ -234,6 +251,14 @@ const repairExperiencePackage = (raw: unknown, fallback: ExperiencePackage): Exp
         description: asNonEmptyString(value.description, fallbackCondition.description),
       } satisfies ExperiencePackage["successConditions"][number];
     });
+
+  // Schema requires at least 2 successConditions — pad with fallback entries if Gemini returned fewer.
+  const successConditions: ExperiencePackage["successConditions"] = mappedSuccessConditions.length >= 2
+    ? mappedSuccessConditions
+    : [
+        ...mappedSuccessConditions,
+        ...fallback.successConditions.slice(mappedSuccessConditions.length, 2),
+      ];
 
   return ExperiencePackageSchema.parse({
     ...fallback,
@@ -433,8 +458,11 @@ export class ExperiencePlannerService {
 
   async planExperience(input: PlanExperienceInput): Promise<ExperiencePackage> {
     if (!config.geminiApiKey || config.disableGemini) {
+      warn("planner", "Gemini disabled — using fallback experience package");
       return fallbackExperiencePackage(input);
     }
+
+    log("planner", `session ${input.sessionId} | topic: "${input.teacherOptions.topic}" | text: ${input.chapterText.length} chars | model: ${config.geminiModelPlanner}`);
 
     const fallback = fallbackExperiencePackage(input);
     const systemInstruction = await this.loadPrompt();
@@ -452,8 +480,11 @@ export class ExperiencePlannerService {
       systemInstruction,
       userPrompt,
       ExperiencePackageSchema,
+      config.geminiModelPlanner,
     );
 
-    return repairExperiencePackage(raw, fallback);
+    const pkg = repairExperiencePackage(raw, fallback);
+    log("planner", `ready: "${pkg.title}" | regions: ${pkg.sceneSpec.regions.length} | questions: ${pkg.questionPlan.length} | theme: "${pkg.sceneSpec.theme}"`);
+    return pkg;
   }
 }

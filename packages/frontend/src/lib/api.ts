@@ -59,3 +59,10 @@ export const fetchSession = async (sessionId: string): Promise<SessionRecord> =>
   const payload: any = await assertJson(await fetch(appConfig.sessionUrl(sessionId)));
   return normalizeSession(payload?.session ?? payload);
 };
+
+export const startSessionBuild = async (sessionId: string): Promise<SessionRecord> => {
+  const payload: any = await assertJson(
+    await fetch(`${appConfig.apiBaseUrl}/api/sessions/${sessionId}/start`, { method: 'POST' }),
+  );
+  return normalizeSession(payload?.session ?? payload);
+};
