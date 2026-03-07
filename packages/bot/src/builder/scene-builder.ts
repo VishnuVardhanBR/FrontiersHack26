@@ -8,6 +8,7 @@ import {
   SessionState,
   Vector3Like,
 } from "../contracts.js";
+import { AQUA_ROMA_BUILD_PLAN } from "../plans/aqua-roma-build.js";
 import { BlockPlacer } from "./block-placer.js";
 import { WalkabilityChecker } from "./walkability-checker.js";
 import { createItemChest, createSignPost, createTorchLine } from "./templates/decorations.js";
@@ -87,6 +88,10 @@ export class SceneBuilder {
   }
 
   private async generateBuildPlan(session: SessionState, apiKey: string | undefined): Promise<BuildPlan> {
+    if (session.experiencePackage?.experienceId === "aqua_roma_demo") {
+      return AQUA_ROMA_BUILD_PLAN;
+    }
+
     if (apiKey) {
       try {
         return await this.generateWithGemini(session.experiencePackage, apiKey);

@@ -1,8 +1,9 @@
 import { startTransition, useState } from 'react';
 import type { ChangeEvent, DragEvent, FormEvent } from 'react';
-import { Compass, Flame, MapPinned, ScrollText, Sparkles, UploadCloud } from 'lucide-react';
+import { Compass, Droplets, Flame, MapPinned, ScrollText, Sparkles, UploadCloud } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+import { useAquaRomaDemo } from '@/hooks/use-aqua-roma-demo';
 import { useUpload } from '@/hooks/use-upload';
 import type { UploadFormValues } from '@/lib/types';
 
@@ -37,6 +38,7 @@ const emphasisOptions = [
 export const UploadPage = () => {
   const navigate = useNavigate();
   const { upload, uploadError, clearUploadError } = useUpload();
+  const { startDemo, isStarting: isDemoStarting, error: demoError, clearError: clearDemoError } = useAquaRomaDemo();
   const [form, setForm] = useState<UploadFormValues>(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -72,6 +74,19 @@ export const UploadPage = () => {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const onStartAquaRomaDemo = async () => {
+    clearUploadError();
+    clearDemoError();
+    try {
+      const response = await startDemo();
+      startTransition(() => {
+        navigate(`/session/${response.sessionId}`);
+      });
+    } catch {
+      // error already set in hook
     }
   };
 
@@ -140,7 +155,34 @@ export const UploadPage = () => {
             </div>
           </div>
 
-          <section className="panel">
+          <section className="panel flex flex-col gap-6">
+            <div className="rounded-2xl border border-sage/30 bg-sage/8 p-4 sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-xl bg-sage/20 p-2.5 text-sage">
+                    <Droplets className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-lg font-semibold text-basalt">Aqua Roma demo</h3>
+                    <p className="mt-1 text-sm leading-6 text-basalt/72">
+                      No upload needed. Start a 3–5 minute Roman aqueduct tour with a guided bot and a simple puzzle.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={onStartAquaRomaDemo}
+                  disabled={isSubmitting || isDemoStarting}
+                  className="shrink-0 rounded-xl bg-sage px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sage/90 disabled:opacity-60"
+                >
+                  {isDemoStarting ? 'Starting…' : 'Start Aqua Roma demo'}
+                </button>
+              </div>
+              {demoError ? (
+                <p className="mt-3 text-sm text-ember">{demoError}</p>
+              ) : null}
+            </div>
+
             <form className="flex flex-col gap-5" onSubmit={onSubmit}>
               <div className="space-y-1">
                 <p className="eyebrow">Teacher Setup</p>

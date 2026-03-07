@@ -2,6 +2,31 @@ import { appConfig } from '@/config';
 import { normalizeSession } from '@/lib/types';
 import type { SessionRecord, UploadFormValues, UploadResponse } from '@/lib/types';
 
+export const startAquaRomaDemo = async (): Promise<UploadResponse> => {
+  const payload: any = await assertJson(
+    await fetch(appConfig.demoAquaRomaUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+
+  const sessionId =
+    typeof payload?.sessionId === 'string'
+      ? payload.sessionId
+      : typeof payload?.id === 'string'
+        ? payload.id
+        : undefined;
+
+  if (!sessionId) {
+    throw new Error('Demo started but no session id was returned.');
+  }
+
+  return {
+    sessionId,
+    session: payload.session ? normalizeSession(payload.session) : undefined,
+  };
+};
+
 const assertJson = async (response: Response) => {
   const contentType = response.headers.get('content-type') || '';
   const payload: any = contentType.includes('application/json') ? await response.json() : await response.text();
