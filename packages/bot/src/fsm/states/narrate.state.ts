@@ -9,6 +9,13 @@ export const createNarrateState = (): TutorState => ({
       return;
     }
 
+    const narrated = new Set(ctx.memory.narratedRegionIds ?? []);
+    if (narrated.has(region.id)) {
+      return;
+    }
+    narrated.add(region.id);
+    ctx.memory.narratedRegionIds = [...narrated];
+
     await ctx.persistState(
       {
         status: "narrating",
@@ -22,10 +29,9 @@ export const createNarrateState = (): TutorState => ({
     );
 
     const dialogue = ctx.session.experiencePackage.dialoguePlan.find((beat) => beat.regionId === region.id);
-    await sayLines(
-      ctx,
-      dialogue?.lines?.length ? dialogue.lines : [region.narration ?? region.description],
-    );
+    const lines = dialogue?.lines?.length ? dialogue.lines : [region.narration ?? region.description];
+    const uniqueLines = [...new Set(lines)];
+    await sayLines(ctx, uniqueLines);
   },
   async onTick(ctx) {
     const question = getCurrentQuestion(ctx);

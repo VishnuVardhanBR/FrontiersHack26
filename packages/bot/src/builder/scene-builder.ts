@@ -1,5 +1,6 @@
 import type { Bot } from "mineflayer";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Vec3 } from "vec3";
 
 import {
   BuildPlan,
@@ -8,11 +9,12 @@ import {
   SessionState,
   Vector3Like,
 } from "../contracts.js";
-import { AQUA_ROMA_BUILD_PLAN } from "../plans/aqua-roma-build.js";
+import { LIBRARY_ALEXANDRIA_EXPERIENCE_ID } from "../plans/alexandria-build.js";
+import { getAlexandriaPlacements } from "../plans/alexandria-scene.js";
 import { BlockPlacer } from "./block-placer.js";
 import { WalkabilityChecker } from "./walkability-checker.js";
 import { createItemChest, createSignPost, createTorchLine } from "./templates/decorations.js";
-import { createArch, createFlatPath, createRubblePile, createSimpleHouse, createWallSegment } from "./templates/structures.js";
+import { createArch, createFlatPath, createRubblePile, createSimpleHouse, createSpawnPortal, createWallSegment } from "./templates/structures.js";
 import { connectPointsWithPath, createAshPatch, createGroundPad } from "./templates/terrain.js";
 
 const SCENE_BUILDER_PROMPT = `
@@ -57,6 +59,15 @@ export interface BuildResult {
   };
 }
 
+/** Tutor spawn position: buildPlan.tutorSpawn if set, else spawn point + 5 blocks along Z. */
+export function getTutorSpawnPosition(buildPlan: BuildPlan): Vector3Like {
+  if (buildPlan.tutorSpawn) {
+    return { ...buildPlan.tutorSpawn };
+  }
+  const s = buildPlan.spawnPoint;
+  return { x: s.x, y: s.y, z: s.z + 5 };
+}
+
 export class SceneBuilder {
   async buildScene(
     bot: Bot,
@@ -64,18 +75,23 @@ export class SceneBuilder {
     apiKey: string | undefined,
     onProgress?: (value: number) => Promise<void> | void,
   ): Promise<BuildResult> {
-    const buildPlan = await this.generateBuildPlan(session, apiKey);
+    const isAlexandria = session.experiencePackage?.experienceId === LIBRARY_ALEXANDRIA_EXPERIENCE_ID;
+    const buildPlan = isAlexandria
+      ? (await import("../plans/alexandria-build.js")).getAlexandriaBuildPlan()
+      : await this.generateBuildPlan(session, apiKey);
     const placer = new BlockPlacer(bot);
 
     await onProgress?.(0.05);
     await placer.clearArea(buildPlan.clearBounds.min, buildPlan.clearBounds.max);
 
-    const placements = this.expandPlacements(buildPlan, session.experiencePackage);
+    const placements = isAlexandria
+      ? getAlexandriaPlacements()
+      : this.expandPlacements(buildPlan, session.experiencePackage);
     const stats = await placer.placeBlocks(placements, async (value) => {
       await onProgress?.(0.05 + value * 0.85);
     });
 
-    const walkabilityPassed = await new WalkabilityChecker(bot).verify(Object.values(buildPlan.regionCenters));
+    const walkabilityPassed = await this.validateSceneForTutor(bot, buildPlan);
     await onProgress?.(1);
 
     return {
@@ -87,11 +103,42 @@ export class SceneBuilder {
     };
   }
 
-  private async generateBuildPlan(session: SessionState, apiKey: string | undefined): Promise<BuildPlan> {
-    if (session.experiencePackage?.experienceId === "aqua_roma_demo") {
-      return AQUA_ROMA_BUILD_PLAN;
+  /**
+   * Ensures the scene is completable by the tutor: safe spawn position (air at feet/head, solid below)
+   * and pathfinding through region centers. Throws if validation fails. Returns walkability result for buildSummary.
+   */
+  private async validateSceneForTutor(bot: Bot, buildPlan: BuildPlan): Promise<boolean> {
+    const tutorPos = getTutorSpawnPosition(buildPlan);
+    const { x, y, z } = tutorPos;
+
+    const blockAtFeet = bot.blockAt(new Vec3(x, y, z));
+    const blockAtHead = bot.blockAt(new Vec3(x, y + 1, z));
+    const blockBelow = bot.blockAt(new Vec3(x, y - 1, z));
+
+    if (!blockBelow || blockBelow.name === "air") {
+      throw new Error(`Scene validation failed: tutor spawn (${x},${y},${z}) has no solid block underfoot.`);
+    }
+    if (!blockAtFeet || blockAtFeet.name !== "air") {
+      throw new Error(`Scene validation failed: tutor spawn (${x},${y},${z}) is not passable (block: ${blockAtFeet?.name ?? "unknown"}).`);
+    }
+    if (!blockAtHead || blockAtHead.name !== "air") {
+      throw new Error(`Scene validation failed: tutor spawn head (${x},${y + 1},${z}) is not passable (block: ${blockAtHead?.name ?? "unknown"}).`);
     }
 
+    const centers = Object.values(buildPlan.regionCenters);
+    if (centers.length < 2) {
+      return true;
+    }
+    bot.chat(`/tp @s ${x} ${y} ${z}`);
+    await new Promise((r) => setTimeout(r, 500));
+    const passed = await new WalkabilityChecker(bot).verify(centers);
+    if (!passed) {
+      throw new Error("Scene validation failed: tutor cannot path to all region centers.");
+    }
+    return true;
+  }
+
+  private async generateBuildPlan(session: SessionState, apiKey: string | undefined): Promise<BuildPlan> {
     if (apiKey) {
       try {
         return await this.generateWithGemini(session.experiencePackage, apiKey);
@@ -195,9 +242,11 @@ export class SceneBuilder {
   }
 
   private expandPlacements(buildPlan: BuildPlan, experience: ExperiencePackage) {
+    const spawn = buildPlan.spawnPoint;
     const placements = [
       ...createGroundPad({ x: -50, y: 3, z: -50 }, 101, 101, "minecraft:grass_block"),
       ...createAshPatch({ x: 0, y: 3, z: buildPlan.regionCenters[experience.sceneSpec.regions.at(-1)?.id ?? "climax"]?.z ?? 48 }, 6),
+      ...createSpawnPortal(spawn),
     ];
 
     const regions = experience.sceneSpec.regions;

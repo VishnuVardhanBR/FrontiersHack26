@@ -1,10 +1,11 @@
 import { startTransition, useState } from 'react';
 import type { ChangeEvent, DragEvent, FormEvent } from 'react';
-import { Compass, Droplets, Flame, MapPinned, ScrollText, Sparkles, UploadCloud } from 'lucide-react';
+import { Compass, ChevronDown, ChevronRight, Copy, FileText, Flame, MapPinned, ScrollText, Sparkles, UploadCloud } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-import { useAquaRomaDemo } from '@/hooks/use-aqua-roma-demo';
 import { useUpload } from '@/hooks/use-upload';
+import { useQuizcraftStore } from '@/store';
+import { fetchPrompts, startLibraryAlexandriaDemo, wrapApiError, type PromptsResponse } from '@/lib/api';
 import type { UploadFormValues } from '@/lib/types';
 
 const ACCEPTED_FILE_TYPES = '.txt,.pdf,.doc,.docx';
@@ -38,10 +39,31 @@ const emphasisOptions = [
 export const UploadPage = () => {
   const navigate = useNavigate();
   const { upload, uploadError, clearUploadError } = useUpload();
-  const { startDemo, isStarting: isDemoStarting, error: demoError, clearError: clearDemoError } = useAquaRomaDemo();
   const [form, setForm] = useState<UploadFormValues>(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [promptsOpen, setPromptsOpen] = useState(false);
+  const [prompts, setPrompts] = useState<PromptsResponse | null>(null);
+  const [promptsLoading, setPromptsLoading] = useState(false);
+  const [alexandriaLoading, setAlexandriaLoading] = useState(false);
+  const [alexandriaError, setAlexandriaError] = useState<string | null>(null);
+  const mergeSession = useQuizcraftStore((s) => s.mergeSession);
+  const setCurrentSessionId = useQuizcraftStore((s) => s.setCurrentSessionId);
+
+  const loadPrompts = async () => {
+    if (prompts) return;
+    setPromptsLoading(true);
+    try {
+      const data = await fetchPrompts();
+      setPrompts(data);
+    } finally {
+      setPromptsLoading(false);
+    }
+  };
+
+  const copyPrompt = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
 
   const setFile = (file: File | null) => {
     clearUploadError();
@@ -77,16 +99,18 @@ export const UploadPage = () => {
     }
   };
 
-  const onStartAquaRomaDemo = async () => {
-    clearUploadError();
-    clearDemoError();
+  const onStartAlexandriaDemo = async () => {
+    setAlexandriaError(null);
+    setAlexandriaLoading(true);
     try {
-      const response = await startDemo();
-      startTransition(() => {
-        navigate(`/session/${response.sessionId}`);
-      });
-    } catch {
-      // error already set in hook
+      const response = await startLibraryAlexandriaDemo();
+      if (response.session) mergeSession(response.session);
+      setCurrentSessionId(response.sessionId);
+      startTransition(() => navigate(`/session/${response.sessionId}`));
+    } catch (err) {
+      setAlexandriaError(wrapApiError(err).message);
+    } finally {
+      setAlexandriaLoading(false);
     }
   };
 
@@ -158,29 +182,81 @@ export const UploadPage = () => {
           <section className="panel flex flex-col gap-6">
             <div className="rounded-2xl border border-sage/30 bg-sage/8 p-4 sm:p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-3">
-                  <div className="rounded-xl bg-sage/20 p-2.5 text-sage">
-                    <Droplets className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-display text-lg font-semibold text-basalt">Aqua Roma demo</h3>
-                    <p className="mt-1 text-sm leading-6 text-basalt/72">
-                      No upload needed. Start a 3–5 minute Roman aqueduct tour with a guided bot and a simple puzzle.
-                    </p>
-                  </div>
+                <div>
+                  <p className="text-sm font-medium text-basalt">Lost Library of Alexandria</p>
+                  <p className="mt-1 text-sm text-basalt/72">
+                    Restore the scroll to the pedestal to open the knowledge chamber. Hardcoded demo — no file upload.
+                  </p>
                 </div>
                 <button
                   type="button"
-                  onClick={onStartAquaRomaDemo}
-                  disabled={isSubmitting || isDemoStarting}
-                  className="shrink-0 rounded-xl bg-sage px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sage/90 disabled:opacity-60"
+                  onClick={onStartAlexandriaDemo}
+                  disabled={alexandriaLoading}
+                  className="shrink-0 rounded-xl bg-sage px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-sage/90 disabled:opacity-60"
                 >
-                  {isDemoStarting ? 'Starting…' : 'Start Aqua Roma demo'}
+                  {alexandriaLoading ? 'Starting…' : 'Render scene & start'}
                 </button>
               </div>
-              {demoError ? (
-                <p className="mt-3 text-sm text-ember">{demoError}</p>
+              {alexandriaError ? (
+                <p className="mt-3 text-sm text-ember">{alexandriaError}</p>
               ) : null}
+            </div>
+
+            <div className="rounded-2xl border border-basalt/10 bg-basalt/[0.02]">
+              <button
+                type="button"
+                onClick={() => {
+                  setPromptsOpen((o) => !o);
+                  if (!promptsOpen) void loadPrompts();
+                }}
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+              >
+                <span className="flex items-center gap-2 font-medium text-basalt">
+                  <FileText className="h-5 w-5 text-brass" />
+                  Generation prompts
+                </span>
+                {promptsOpen ? (
+                  <ChevronDown className="h-5 w-5 text-basalt/60" />
+                ) : (
+                  <ChevronRight className="h-5 w-5 text-basalt/60" />
+                )}
+              </button>
+              {promptsOpen && (
+                <div className="border-t border-basalt/10 px-4 py-3">
+                  {promptsLoading ? (
+                    <p className="text-sm text-basalt/60">Loading…</p>
+                  ) : prompts ? (
+                    <div className="flex flex-col gap-4">
+                      <p className="text-xs text-basalt/60">
+                        Edit files in <code className="rounded bg-basalt/10 px-1">packages/server/src/gemini/prompts/</code> to change behavior. See <code className="rounded bg-basalt/10 px-1">docs/PROMPTS.md</code>.
+                      </p>
+                      {[
+                        { key: 'experiencePlanner', label: 'Experience planner (lesson from chapter)', text: prompts.prompts.experiencePlanner },
+                        { key: 'sceneBuilder', label: 'Scene builder (server reference)', text: prompts.prompts.sceneBuilder },
+                        { key: 'sceneBuilderBot', label: 'Scene builder – bot (actual build)', text: prompts.prompts.sceneBuilderBot },
+                      ].map(({ key, label, text }) => (
+                        <div key={key} className="flex flex-col gap-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-medium text-basalt">{label}</span>
+                            <button
+                              type="button"
+                              onClick={() => copyPrompt(text)}
+                              className="flex items-center gap-1 rounded px-2 py-1 text-xs text-basalt/70 hover:bg-basalt/10"
+                            >
+                              <Copy className="h-3.5 w-3.5" /> Copy
+                            </button>
+                          </div>
+                          <pre className="max-h-40 overflow-auto rounded-lg border border-basalt/10 bg-basalt/[0.04] p-3 text-xs leading-5 text-basalt/85 whitespace-pre-wrap">
+                            {text || '(empty)'}
+                          </pre>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-basalt/60">Could not load prompts.</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <form className="flex flex-col gap-5" onSubmit={onSubmit}>

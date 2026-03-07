@@ -1,0 +1,653 @@
+
+{
+  "project": {
+    "name": "Lost Library of Alexandria",
+    "codename": "library_demo_v1",
+    "format": "hard_coded_vertical_slice",
+    "targetDurationSeconds": 90,
+    "theme": "ancient library, preserved knowledge, guided discovery",
+    "coreLearningGoals": [
+      "Ancient libraries stored and organized written knowledge",
+      "Texts had to be copied by hand to survive and spread",
+      "Preserving knowledge allows later generations to build on past ideas"
+    ],
+    "demoWinCondition": "player restores the missing scroll to the archive pedestal and the hidden knowledge chamber opens"
+  },
+  "world": {
+    "bounds": {
+      "minX": -20,
+      "maxX": 20,
+      "minY": 6,
+      "maxY": 18,
+      "minZ": -8,
+      "maxZ": 28
+    },
+    "baseWalkY": 8,
+    "style": {
+      "mood": "torch-lit, mysterious, compact, magical but grounded",
+      "density": "medium_high",
+      "layout": "single linear walkway with one central hall and one final reveal chamber",
+      "cameraGoal": "from spawn, player can see the main hall, the archive pedestal, and the sealed glowing chamber door"
+    },
+    "palette": {
+      "floor": ["stone_bricks", "smooth_stone", "polished_andesite"],
+      "walls": ["stone_bricks", "cracked_stone_bricks", "chiseled_stone_bricks"],
+      "trim": ["spruce_planks", "spruce_slab", "spruce_stairs"],
+      "library": ["bookshelf", "lectern", "oak_planks"],
+      "lighting": ["torch", "lantern", "glowstone_hidden"],
+      "accent": ["gold_block_small_use", "purple_stained_glass_small_use"],
+      "interactive": ["lectern", "chest", "stone_button", "pedestal_block"]
+    }
+  },
+  "anchors": {
+    "playerSpawn": { "x": 0, "y": 8, "z": 0, "yaw": 0, "pitch": 0 },
+    "tutorSpawn": { "x": 2, "y": 8, "z": 0, "yaw": 0, "pitch": 0 },
+    "introStand": { "x": 1, "y": 8, "z": 2 },
+    "shelfStop": { "x": 0, "y": 8, "z": 8 },
+    "pedestalStop": { "x": 0, "y": 8, "z": 15 },
+    "doorStop": { "x": 0, "y": 8, "z": 20 },
+    "finalChamberView": { "x": 0, "y": 8, "z": 24 }
+  },
+  "regions": [
+    {
+      "id": "entry_foyer",
+      "name": "Entry Foyer",
+      "purpose": "orientation and first impression",
+      "bounds": { "x1": -5, "x2": 5, "y": 8, "z1": -2, "z2": 4 },
+      "visualIntent": "compact stone landing with columns framing a dark hall ahead",
+      "objects": [
+        "entry_platform",
+        "left_column_pair",
+        "right_column_pair",
+        "intro_sign",
+        "tutor_spawn_marker"
+      ]
+    },
+    {
+      "id": "main_stacks",
+      "name": "Main Stacks",
+      "purpose": "teach how ancient knowledge was stored and copied",
+      "bounds": { "x1": -6, "x2": 6, "y": 8, "z1": 5, "z2": 12 },
+      "visualIntent": "two short aisles of shelves and lecterns with warm torch light",
+      "objects": [
+        "left_shelf_row",
+        "right_shelf_row",
+        "copying_lectern_left",
+        "copying_lectern_right",
+        "stack_torches",
+        "rubble_corner_left"
+      ]
+    },
+    {
+      "id": "restoration_nook",
+      "name": "Restoration Nook",
+      "purpose": "main interaction and puzzle",
+      "bounds": { "x1": -5, "x2": 5, "y": 8, "z1": 13, "z2": 18 },
+      "visualIntent": "central pedestal with one missing scroll and a sealed archive door behind it",
+      "objects": [
+        "archive_pedestal",
+        "missing_scroll_chest",
+        "seal_door",
+        "seal_glow_frame",
+        "small_side_columns"
+      ]
+    },
+    {
+      "id": "knowledge_chamber",
+      "name": "Knowledge Chamber",
+      "purpose": "reward reveal and recap",
+      "bounds": { "x1": -5, "x2": 5, "y": 8, "z1": 21, "z2": 27 },
+      "visualIntent": "small glowing chamber with a central illuminated archive plinth",
+      "objects": [
+        "glow_chamber_floor",
+        "archive_core_plinth",
+        "hidden_glow_blocks",
+        "victory_bookshelves"
+      ]
+    }
+  ],
+  "sceneObjects": [
+    {
+      "id": "entry_platform",
+      "type": "platform",
+      "template": "rect_platform",
+      "position": { "x": 0, "y": 8, "z": 1 },
+      "size": { "width": 10, "length": 6, "height": 1 },
+      "materials": ["smooth_stone", "stone_bricks"],
+      "properties": {
+        "walkable": true,
+        "mainPath": true,
+        "decorative": false
+      }
+    },
+    {
+      "id": "left_column_pair",
+      "type": "column_group",
+      "template": "double_column",
+      "position": { "x": -4, "y": 8, "z": 2 },
+      "size": { "width": 1, "length": 1, "height": 5 },
+      "materials": ["chiseled_stone_bricks", "stone_bricks"],
+      "properties": {
+        "symmetryPartner": "right_column_pair",
+        "walkBlock": false,
+        "landmark": true
+      }
+    },
+    {
+      "id": "right_column_pair",
+      "type": "column_group",
+      "template": "double_column",
+      "position": { "x": 4, "y": 8, "z": 2 },
+      "size": { "width": 1, "length": 1, "height": 5 },
+      "materials": ["chiseled_stone_bricks", "stone_bricks"],
+      "properties": {
+        "symmetryPartner": "left_column_pair",
+        "walkBlock": false,
+        "landmark": true
+      }
+    },
+    {
+      "id": "intro_sign",
+      "type": "sign",
+      "template": "single_sign",
+      "position": { "x": -2, "y": 9, "z": 1 },
+      "materials": ["oak_sign"],
+      "text": "Lost Library of Alexandria",
+      "properties": {
+        "readable": true,
+        "optional": true
+      }
+    },
+    {
+      "id": "left_shelf_row",
+      "type": "bookshelf_row",
+      "template": "library_aisle",
+      "position": { "x": -3, "y": 8, "z": 8 },
+      "size": { "width": 2, "length": 6, "height": 3 },
+      "materials": ["bookshelf", "spruce_planks", "spruce_slab"],
+      "properties": {
+        "walkBlock": false,
+        "teachingLandmark": true,
+        "lineOfSightFriendly": true
+      }
+    },
+    {
+      "id": "right_shelf_row",
+      "type": "bookshelf_row",
+      "template": "library_aisle",
+      "position": { "x": 3, "y": 8, "z": 8 },
+      "size": { "width": 2, "length": 6, "height": 3 },
+      "materials": ["bookshelf", "spruce_planks", "spruce_slab"],
+      "properties": {
+        "walkBlock": false,
+        "teachingLandmark": true,
+        "lineOfSightFriendly": true
+      }
+    },
+    {
+      "id": "copying_lectern_left",
+      "type": "lectern_station",
+      "template": "lectern_table",
+      "position": { "x": -1, "y": 8, "z": 10 },
+      "materials": ["lectern", "spruce_stairs"],
+      "properties": {
+        "themeRole": "copying_texts",
+        "interactive": false,
+        "visualCue": true
+      }
+    },
+    {
+      "id": "copying_lectern_right",
+      "type": "lectern_station",
+      "template": "lectern_table",
+      "position": { "x": 1, "y": 8, "z": 10 },
+      "materials": ["lectern", "spruce_stairs"],
+      "properties": {
+        "themeRole": "preserving_texts",
+        "interactive": false,
+        "visualCue": true
+      }
+    },
+    {
+      "id": "stack_torches",
+      "type": "light_group",
+      "template": "torch_pair",
+      "position": { "x": 0, "y": 9, "z": 7 },
+      "materials": ["torch", "lantern"],
+      "properties": {
+        "atmospheric": true,
+        "guidesPath": true
+      }
+    },
+    {
+      "id": "rubble_corner_left",
+      "type": "debris",
+      "template": "rubble_pile_small",
+      "position": { "x": -5, "y": 8, "z": 11 },
+      "materials": ["cracked_stone_bricks", "cobblestone", "stone_slab"],
+      "properties": {
+        "ruinMood": true,
+        "walkBlock": false
+      }
+    },
+    {
+      "id": "archive_pedestal",
+      "type": "pedestal",
+      "template": "center_pedestal",
+      "position": { "x": 0, "y": 8, "z": 15 },
+      "size": { "width": 3, "length": 3, "height": 2 },
+      "materials": ["chiseled_stone_bricks", "smooth_stone", "gold_block_small_use"],
+      "properties": {
+        "interactive": true,
+        "acceptsItem": "sealed_scroll",
+        "stateful": true,
+        "initialState": "empty",
+        "successState": "scroll_restored"
+      }
+    },
+    {
+      "id": "missing_scroll_chest",
+      "type": "item_source",
+      "template": "small_chest_station",
+      "position": { "x": -3, "y": 8, "z": 15 },
+      "materials": ["chest", "spruce_planks"],
+      "properties": {
+        "interactive": true,
+        "contains": ["sealed_scroll"],
+        "singleUse": true,
+        "label": "Archive Scroll"
+      }
+    },
+    {
+      "id": "seal_door",
+      "type": "door",
+      "template": "sealed_archive_door",
+      "position": { "x": 0, "y": 8, "z": 20 },
+      "size": { "width": 5, "length": 1, "height": 4 },
+      "materials": ["stone_bricks", "iron_bars_optional", "purple_stained_glass_small_use"],
+      "properties": {
+        "interactive": false,
+        "lockedInitially": true,
+        "opensOn": "archive_pedestal.state == scroll_restored",
+        "openAnimationStyle": "remove_center_blocks_and_enable_glow",
+        "blocksProgress": true
+      }
+    },
+    {
+      "id": "seal_glow_frame",
+      "type": "effect_frame",
+      "template": "hidden_glow_border",
+      "position": { "x": 0, "y": 10, "z": 20 },
+      "materials": ["glowstone_hidden", "purple_stained_glass_small_use"],
+      "properties": {
+        "inactiveAtStart": true,
+        "activateOnDoorOpen": true,
+        "cameraPayoff": true
+      }
+    },
+    {
+      "id": "small_side_columns",
+      "type": "column_group",
+      "template": "mini_columns",
+      "position": { "x": 0, "y": 8, "z": 17 },
+      "materials": ["stone_bricks", "chiseled_stone_bricks"],
+      "properties": {
+        "framing": true,
+        "walkBlock": false
+      }
+    },
+    {
+      "id": "glow_chamber_floor",
+      "type": "platform",
+      "template": "reward_floor",
+      "position": { "x": 0, "y": 8, "z": 24 },
+      "size": { "width": 8, "length": 6, "height": 1 },
+      "materials": ["smooth_stone", "polished_andesite", "glowstone_hidden"],
+      "properties": {
+        "walkable": true,
+        "revealedLate": true,
+        "rewardArea": true
+      }
+    },
+    {
+      "id": "archive_core_plinth",
+      "type": "reward_object",
+      "template": "glowing_archive_plinth",
+      "position": { "x": 0, "y": 8, "z": 25 },
+      "materials": ["chiseled_stone_bricks", "lectern", "lantern", "gold_block_small_use"],
+      "properties": {
+        "interactive": false,
+        "symbolizes": "preserved_knowledge",
+        "cameraCenterpiece": true
+      }
+    },
+    {
+      "id": "hidden_glow_blocks",
+      "type": "light_group",
+      "template": "concealed_glow",
+      "position": { "x": 0, "y": 10, "z": 24 },
+      "materials": ["glowstone_hidden"],
+      "properties": {
+        "offAtStart": true,
+        "onAfterSuccess": true,
+        "softReveal": true
+      }
+    },
+    {
+      "id": "victory_bookshelves",
+      "type": "bookshelf_frame",
+      "template": "reward_shelves",
+      "position": { "x": 0, "y": 8, "z": 26 },
+      "size": { "width": 6, "length": 1, "height": 3 },
+      "materials": ["bookshelf", "spruce_planks"],
+      "properties": {
+        "decorative": true,
+        "framesReward": true
+      }
+    }
+  ],
+  "interactions": [
+    {
+      "id": "open_scroll_chest",
+      "type": "chest_open",
+      "targetObject": "missing_scroll_chest",
+      "playerAction": "open chest and take sealed_scroll",
+      "preconditions": [],
+      "result": {
+        "inventoryAdd": ["sealed_scroll"],
+        "flagsSet": ["has_scroll"],
+        "oneTimeOnly": true
+      },
+      "feedback": {
+        "visual": "chest opens",
+        "audio": "chest_open",
+        "tutorOptionalLine": "That scroll stands in for a copied text. In the ancient world, knowledge survived because people preserved and recopied it."
+      }
+    },
+    {
+      "id": "place_scroll_on_pedestal",
+      "type": "item_place",
+      "targetObject": "archive_pedestal",
+      "playerAction": "use sealed_scroll on pedestal",
+      "preconditions": ["flag:has_scroll == true"],
+      "result": {
+        "pedestalState": "scroll_restored",
+        "flagsSet": ["scroll_restored"],
+        "inventoryRemove": ["sealed_scroll"]
+      },
+      "feedback": {
+        "visual": "scroll appears on pedestal",
+        "audio": "soft_chime",
+        "particle": "optional_small_glow"
+      }
+    },
+    {
+      "id": "open_archive_door",
+      "type": "state_trigger",
+      "targetObject": "seal_door",
+      "playerAction": "automatic after pedestal restored",
+      "preconditions": ["flag:scroll_restored == true"],
+      "result": {
+        "doorState": "open",
+        "flagsSet": ["archive_open"],
+        "activateObjects": ["seal_glow_frame", "hidden_glow_blocks"]
+      },
+      "feedback": {
+        "visual": "sealed door opens and chamber glows",
+        "audio": "stone_shift",
+        "cameraFriendly": true
+      }
+    },
+    {
+      "id": "enter_knowledge_chamber",
+      "type": "proximity_trigger",
+      "targetObject": "knowledge_chamber",
+      "playerAction": "walk through opened door",
+      "preconditions": ["flag:archive_open == true"],
+      "result": {
+        "flagsSet": ["reward_seen"]
+      },
+      "feedback": {
+        "visual": "archive core comes into full view",
+        "audio": "lantern_hum_optional"
+      }
+    }
+  ],
+  "objectives": {
+    "primary": {
+      "id": "restore_knowledge",
+      "description": "Restore the missing scroll to the archive pedestal to unlock the knowledge chamber.",
+      "successConditions": [
+        "flag:scroll_restored == true",
+        "flag:archive_open == true"
+      ]
+    },
+    "secondary": [
+      {
+        "id": "observe_library_stacks",
+        "description": "Follow the tutor to the main stacks and learn how texts were stored and copied.",
+        "optional": true
+      },
+      {
+        "id": "enter_reward_chamber",
+        "description": "Walk into the opened chamber and view the restored archive.",
+        "optional": true
+      }
+    ]
+  },
+  "runtimeState": {
+    "flags": {
+      "player_near_intro": false,
+      "visited_shelf_stop": false,
+      "has_scroll": false,
+      "scroll_restored": false,
+      "archive_open": false,
+      "reward_seen": false
+    },
+    "timers": {
+      "hintDelaySeconds": 8,
+      "doorOpenDelayMs": 700,
+      "successDialogueDelayMs": 1000
+    }
+  },
+  "tutor": {
+    "id": "alex_guide",
+    "name": "Alex",
+    "entityType": "mineflayer_bot",
+    "spawn": { "x": 2, "y": 8, "z": 0 },
+    "movementMode": "hardcoded_waypoints",
+    "waypoints": [
+      { "id": "intro", "position": { "x": 1, "y": 8, "z": 2 } },
+      { "id": "shelves", "position": { "x": 0, "y": 8, "z": 8 } },
+      { "id": "pedestal", "position": { "x": 2, "y": 8, "z": 14 } },
+      { "id": "door_view", "position": { "x": 2, "y": 8, "z": 19 } },
+      { "id": "final_view", "position": { "x": 1, "y": 8, "z": 24 } }
+    ],
+    "behaviorRules": {
+      "neverFreeRoam": true,
+      "neverLeaveMainPath": true,
+      "speakInShortLines": true,
+      "maxLineSeconds": 6,
+      "waitForPlayerAtStops": true,
+      "hintOnlyIfStalled": true
+    },
+    "dialogueScript": [
+      {
+        "id": "intro_1",
+        "trigger": "player within 4 blocks of introStand",
+        "action": "speak",
+        "text": "Welcome to the Lost Library. Here, knowledge was precious because every text had to be preserved by people, one copy at a time."
+      },
+      {
+        "id": "intro_move",
+        "trigger": "after intro_1",
+        "action": "move",
+        "targetWaypoint": "shelves"
+      },
+      {
+        "id": "shelves_1",
+        "trigger": "tutor reaches shelves and player within 5 blocks",
+        "action": "speak",
+        "text": "Libraries were more than buildings full of books. They were places where ideas were stored, organized, and copied so they would not disappear."
+      },
+      {
+        "id": "shelves_2",
+        "trigger": "after shelves_1",
+        "action": "speak",
+        "text": "If even one important text was lost, future readers might never recover it."
+      },
+      {
+        "id": "question_1",
+        "trigger": "after shelves_2",
+        "action": "askQuestion",
+        "question": {
+          "id": "why_copy_texts",
+          "prompt": "Why did ancient texts need to be copied by hand?",
+          "acceptableAnswers": [
+            "to preserve them",
+            "so they would survive",
+            "to make more copies",
+            "because there were no printers"
+          ],
+          "fallbackMode": "rhetorical_if_no_answer_after_5s",
+          "explanationOnResolve": "Exactly. Copying helped texts survive and spread to new readers."
+        }
+      },
+      {
+        "id": "move_to_pedestal",
+        "trigger": "after question_1",
+        "action": "move",
+        "targetWaypoint": "pedestal"
+      },
+      {
+        "id": "pedestal_1",
+        "trigger": "tutor reaches pedestal and player within 5 blocks",
+        "action": "speak",
+        "text": "This archive is sealed because one key scroll is missing. Restore it to the pedestal and the chamber will open."
+      },
+      {
+        "id": "pedestal_2",
+        "trigger": "after pedestal_1",
+        "action": "speak",
+        "text": "Take the scroll from the chest and place it here."
+      },
+      {
+        "id": "hint_if_stalled_1",
+        "trigger": "8 seconds after pedestal_2 if flag:has_scroll == false",
+        "action": "speak",
+        "text": "The scroll you need is in the chest beside the pedestal."
+      },
+      {
+        "id": "hint_if_stalled_2",
+        "trigger": "8 seconds after has_scroll if flag:scroll_restored == false",
+        "action": "speak",
+        "text": "Now place the scroll on the central pedestal to restore the archive."
+      },
+      {
+        "id": "success_1",
+        "trigger": "flag:archive_open == true",
+        "action": "speak",
+        "text": "Well done. Preserving knowledge let later generations build on earlier discoveries instead of starting over."
+      },
+      {
+        "id": "success_move",
+        "trigger": "after success_1",
+        "action": "move",
+        "targetWaypoint": "final_view"
+      },
+      {
+        "id": "success_2",
+        "trigger": "tutor reaches final_view and player within 6 blocks",
+        "action": "speak",
+        "text": "That is why libraries mattered so much. They protected memory, learning, and the spread of ideas."
+      },
+      {
+        "id": "question_2",
+        "trigger": "after success_2",
+        "action": "askQuestion",
+        "question": {
+          "id": "why_libraries_matter",
+          "prompt": "Quick check: what did libraries help preserve — only objects, or ideas too?",
+          "acceptableAnswers": [
+            "ideas too",
+            "ideas",
+            "knowledge",
+            "both"
+          ],
+          "fallbackMode": "auto_resolve_after_4s",
+          "explanationOnResolve": "Right. Libraries preserved ideas by preserving texts."
+        }
+      }
+    ]
+  },
+  "questions": [
+    {
+      "id": "why_copy_texts",
+      "timing": "mid_demo",
+      "prompt": "Why did ancient texts need to be copied by hand?",
+      "answerType": "short_free_response_or_rhetorical",
+      "correctConcepts": [
+        "preservation",
+        "survival of texts",
+        "sharing knowledge",
+        "no printing technology"
+      ],
+      "explanation": "Without printing, a text could vanish unless someone copied it carefully."
+    },
+    {
+      "id": "why_libraries_matter",
+      "timing": "end_demo",
+      "prompt": "What did libraries help preserve — only objects, or ideas too?",
+      "answerType": "short_free_response_or_rhetorical",
+      "correctConcepts": [
+        "ideas",
+        "knowledge",
+        "memory of civilizations"
+      ],
+      "explanation": "Libraries preserved ideas by storing and organizing written works."
+    }
+  ],
+  "renderingNotes": {
+    "mustLookGoodFromSpawn": true,
+    "spawnSightline": [
+      "entry columns frame the stacks",
+      "pedestal is visible beyond the shelves",
+      "sealed door glow is faintly visible in distance"
+    ],
+    "lightingPlan": {
+      "entry": "dim but readable",
+      "stacks": "warm torch light",
+      "pedestal": "slightly brighter focal spot",
+      "knowledgeChamber": "dark at start, glows on success"
+    },
+    "emptySpacePolicy": "avoid large unused floor patches; fill corners with rubble, shelves, columns, or trim",
+    "cameraPayoffMoment": "door opens and hidden glow activates immediately after pedestal restoration"
+  },
+  "implementationHints": {
+    "bestPuzzleImplementation": "use chest item retrieval + pedestal proximity/item-use event, not a complex inventory puzzle",
+    "bestDoorImplementation": "swap blocking blocks to air and enable hidden lights instead of relying on animated doors",
+    "bestSuccessEffect": "activate glow blocks and tutor success line within 1 second of placing the scroll",
+    "avoid": [
+      "randomized puzzle variants",
+      "freeform tutor generation during the demo",
+      "large maze-like shelf layouts",
+      "multiple items or wrong answers that slow down the demo"
+    ]
+  },
+  "successMetrics": {
+    "targetCompletionTimeSeconds": 75,
+    "acceptableCompletionTimeSeconds": 105,
+    "playerShouldUnderstand": [
+      "texts were copied by hand",
+      "libraries preserved knowledge",
+      "restoring the scroll symbolizes preserving ideas"
+    ],
+    "demoLooksSuccessfulIf": [
+      "tutor stays on same Y-level as player",
+      "player never gets lost",
+      "pedestal interaction works on first try",
+      "archive opening is visually obvious"
+    ]
+  }
+}
+

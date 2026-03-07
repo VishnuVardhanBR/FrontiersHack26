@@ -36,6 +36,16 @@ export interface TutorMemory {
   objectiveStartedAt?: number | undefined;
   recapAsked: boolean;
   completed: boolean;
+  /** Set by FSM so onTick is skipped until onEnter completes (prevents duplicate dialogue). */
+  onEnterInProgress?: boolean;
+  /** Region IDs already narrated (avoid re-delivery). */
+  narratedRegionIds?: string[];
+  /** Aqua Roma: when puzzle conditions first became true (for debounce). */
+  aquaPuzzleSatisfiedAt?: number;
+  /** Aqua Roma: hint given for block. */
+  aquaRepairHintGiven?: boolean;
+  /** Aqua Roma: hint given for lever. */
+  aquaLeverHintGiven?: boolean;
 }
 
 export interface TutorContext {
@@ -82,6 +92,12 @@ const STATUS_BY_STATE: Record<TutorStateName, string> = {
   MONITOR_OBJECTIVE: "monitoring_objective",
   CLIMAX_RECAP: "climax_recap",
   END_SESSION: "completed",
+  ALEX_INTRO: "introducing",
+  ALEX_SHELVES: "narrating",
+  ALEX_PEDESTAL_INTRO: "narrating",
+  ALEX_WAIT_SCROLL: "monitoring_objective",
+  ALEX_SUCCESS: "narrating",
+  ALEX_OUTRO: "climax_recap",
 };
 
 export class TutorFSM {
@@ -109,6 +125,9 @@ export class TutorFSM {
     this.timer = setInterval(() => {
       void this.enqueue(async () => {
         if (!this.running || this.ctx.memory.completed) {
+          return;
+        }
+        if (this.ctx.memory.onEnterInProgress) {
           return;
         }
 
@@ -189,8 +208,13 @@ export class TutorFSM {
 
   private async enterState(stateName: TutorStateName): Promise<void> {
     this.ctx.memory.stateEnteredAt = Date.now();
+    this.ctx.memory.onEnterInProgress = true;
     this.ctx.tracker.markState(stateName);
-    await this.states[stateName].onEnter(this.ctx);
+    try {
+      await this.states[stateName].onEnter(this.ctx);
+    } finally {
+      this.ctx.memory.onEnterInProgress = false;
+    }
     await delay(10);
   }
 }

@@ -3,7 +3,7 @@ import type { Bot } from "mineflayer";
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export class Narrator {
-  async say(bot: Bot, message: string, pauseMs = 700): Promise<void> {
+  async say(bot: Bot, message: string, pauseMs = 1800): Promise<void> {
     const chunks = this.chunk(message);
     for (const chunk of chunks) {
       bot.chat(chunk);
@@ -11,7 +11,7 @@ export class Narrator {
     }
   }
 
-  async sayLines(bot: Bot, lines: string[], pauseMs = 800): Promise<void> {
+  async sayLines(bot: Bot, lines: string[], pauseMs = 2200): Promise<void> {
     for (const line of lines) {
       if (line.trim()) {
         await this.say(bot, line, pauseMs);

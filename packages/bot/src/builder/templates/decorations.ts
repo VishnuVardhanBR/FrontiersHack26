@@ -1,12 +1,20 @@
 import { BlockPlacement, Vector3Like } from "../../contracts.js";
 
-const signNbt = (text: string): string =>
-  `{front_text:{messages:['{"text":"${text.replace(/"/g, "'")}"}','{"text":""}','{"text":""}','{"text":""}']}}`;
+/** Build sign NBT for 1.20+: messages are JSON strings; use plain string for readable text. */
+function signNbt(line1: string, line2 = "", line3 = "", line4 = ""): string {
+  const escape = (s: string) => s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  const a = [escape(line1), escape(line2), escape(line3), escape(line4)].map((s) => `"${s}"`);
+  return `{front_text:{messages:[${a.join(",")}]}}`;
+}
 
-export const createSignPost = (origin: Vector3Like, text: string): BlockPlacement[] => [
-  { x: origin.x, y: origin.y, z: origin.z, block: "minecraft:oak_fence" },
-  { x: origin.x, y: origin.y + 1, z: origin.z, block: "minecraft:oak_sign[rotation=8]", nbt: signNbt(text) },
-];
+export const createSignPost = (origin: Vector3Like, text: string): BlockPlacement[] => {
+  const lines = text.split("\n").slice(0, 4);
+  const nbt = signNbt(lines[0] ?? "", lines[1] ?? "", lines[2] ?? "", lines[3] ?? "");
+  return [
+    { x: origin.x, y: origin.y, z: origin.z, block: "minecraft:oak_fence" },
+    { x: origin.x, y: origin.y + 1, z: origin.z, block: "minecraft:oak_sign[rotation=8]", nbt },
+  ];
+};
 
 export const createTorchLine = (origin: Vector3Like, length = 5): BlockPlacement[] => {
   const placements: BlockPlacement[] = [];
@@ -16,12 +24,20 @@ export const createTorchLine = (origin: Vector3Like, length = 5): BlockPlacement
   return placements;
 };
 
-export const createItemChest = (origin: Vector3Like, itemName: string): BlockPlacement[] => [
-  {
-    x: origin.x,
-    y: origin.y,
-    z: origin.z,
-    block: "minecraft:chest[facing=south]",
-    nbt: `{CustomName:'{"text":"Artifact Chest"}',Items:[{Slot:13b,id:"minecraft:${itemName}",Count:1b}]}`,
-  },
-];
+export const createItemChest = (
+  origin: Vector3Like,
+  itemName: string,
+  label?: string,
+): BlockPlacement[] => {
+  const name = label ?? "Chest";
+  const escaped = name.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return [
+    {
+      x: origin.x,
+      y: origin.y,
+      z: origin.z,
+      block: "minecraft:chest[facing=south]",
+      nbt: `{CustomName:'{"text":"${escaped}"}',Items:[{Slot:0b,id:"minecraft:${itemName}",Count:1b}]}`,
+    },
+  ];
+};

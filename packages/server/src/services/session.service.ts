@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   BuildPlanSchema,
   SSEEventSchema,
+  SessionStatusSchema,
   SessionStateSchema,
   type BuildPlan,
   type ExperiencePackage,
@@ -12,6 +13,32 @@ import {
   type TeacherOptions,
 } from "@quizcraft/shared";
 import { v4 as uuidv4 } from "uuid";
+import { z } from "zod";
+
+/** Permissive schema for reading session.json that the bot may have overwritten (different shape). */
+const SessionStateFileSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().optional().default("Untitled QuizCraft Session"),
+  sourceFileName: z.string().optional().default("session.txt"),
+  sourceFileType: z.string().optional().default("txt"),
+  createdAt: z.string().optional().default(() => new Date().toISOString()),
+  updatedAt: z.string().optional().default(() => new Date().toISOString()),
+  status: SessionStatusSchema.optional().default("queued"),
+  teacherOptions: z.record(z.unknown()).optional().default({}),
+  sourceTextPath: z.string().optional(),
+  experiencePackage: z.unknown().nullable().optional().default(null),
+  buildPlan: z.unknown().nullable().optional().default(null),
+  buildProgress: z.record(z.unknown()).optional().default({}),
+  currentRegionId: z.string().nullable().optional().default(null),
+  activeQuestionIndex: z.number().optional().default(0),
+  objectiveFound: z.boolean().optional().default(false),
+  questionAttempts: z.array(z.unknown()).optional().default([]),
+  chatLog: z.array(z.unknown()).optional().default([]),
+  summary: z.unknown().nullable().optional().default(null),
+  errorMessage: z.string().nullable().optional().default(null),
+  claimedBy: z.string().nullable().optional().default(null),
+  lastHeartbeatAt: z.string().nullable().optional().default(null),
+});
 
 export interface CreateSessionInput {
   sourceFileName: string;
@@ -82,7 +109,27 @@ export class SessionService {
   async getSession(sessionId: string): Promise<SessionState | null> {
     try {
       const raw = await fs.readFile(this.sessionFile(sessionId), "utf8");
-      return SessionStateSchema.parse(JSON.parse(raw));
+      const data = JSON.parse(raw) as Record<string, unknown>;
+      try {
+        return SessionStateSchema.parse(data) as SessionState;
+      } catch {
+        const parsed = SessionStateFileSchema.parse(data);
+        return {
+          ...parsed,
+          teacherOptions:
+            parsed.teacherOptions && typeof parsed.teacherOptions === "object" && "topic" in parsed.teacherOptions
+              ? (parsed.teacherOptions as TeacherOptions)
+              : { topic: parsed.title ?? "Session", gradeLevel: "6-8", questionCount: 4, objectiveEmphasis: "artifact hunt" },
+          experiencePackage: parsed.experiencePackage as SessionState["experiencePackage"],
+          buildPlan: parsed.buildPlan as SessionState["buildPlan"],
+          buildProgress:
+            typeof parsed.buildProgress === "object" && parsed.buildProgress && "percent" in parsed.buildProgress
+              ? (parsed.buildProgress as SessionState["buildProgress"])
+              : {},
+          questionAttempts: Array.isArray(parsed.questionAttempts) ? (parsed.questionAttempts as SessionState["questionAttempts"]) : [],
+          chatLog: Array.isArray(parsed.chatLog) ? (parsed.chatLog as SessionState["chatLog"]) : [],
+        } as SessionState;
+      }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return null;
@@ -100,11 +147,18 @@ export class SessionService {
       throw new Error(`Session ${sessionId} not found.`);
     }
 
-    const updated = SessionStateSchema.parse({
+    const merged = {
       ...current,
       ...patch,
       updatedAt: new Date().toISOString(),
-    });
+    };
+
+    let updated: SessionState;
+    try {
+      updated = SessionStateSchema.parse(merged) as SessionState;
+    } catch {
+      updated = merged as SessionState;
+    }
 
     await this.writeJson(this.sessionFile(sessionId), updated);
     return updated;

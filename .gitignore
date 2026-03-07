@@ -1,7 +1,11 @@
 node_modules
 dist
 .env
+.env.local
+.env.*.local
+*.env
 .DS_Store
+server.jar
 .storage
 *.log
 coverage
@@ -23,6 +27,9 @@ mc-server/whitelist.json
 mc-server/world
 mc-server/world_nether
 mc-server/world_the_end
+
+# Reference repo (minecraftlm) — clone for techniques, not committed
+minecraftlm/
 
 packages/frontend/.vite
 *.tsbuildinfo

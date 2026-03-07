@@ -18,6 +18,7 @@ export interface BotManagerEvents {
 export class BotManager extends EventEmitter<BotManagerEvents> {
   private botInstance: Bot | null = null;
   private reconnectTimer: NodeJS.Timeout | null = null;
+  private reconnectAttempt = 0;
 
   constructor(private readonly config: BotConfig) {
     super();
@@ -69,6 +70,7 @@ export class BotManager extends EventEmitter<BotManagerEvents> {
     this.botInstance = bot;
     return new Promise<Bot>((resolve, reject) => {
       const onSpawn = () => {
+        this.reconnectAttempt = 0;
         this.emit("spawned");
         this.clearReconnect();
         cleanup();
@@ -110,10 +112,18 @@ export class BotManager extends EventEmitter<BotManagerEvents> {
       return;
     }
 
+    this.reconnectAttempt += 1;
+    const baseDelayMs = 5000;
+    const delayMs = Math.min(baseDelayMs * Math.pow(2, Math.min(this.reconnectAttempt - 1, 4)), 30_000);
+
+    if (this.reconnectAttempt === 1) {
+      console.warn(`[bot] Minecraft server unreachable. Reconnecting in ${delayMs / 1000}s...`);
+    }
+
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       void this.connect().catch((error) => this.emit("error", error instanceof Error ? error : new Error(String(error))));
-    }, 3_000);
+    }, delayMs);
   }
 
   private clearReconnect(): void {

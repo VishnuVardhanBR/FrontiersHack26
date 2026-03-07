@@ -25,8 +25,7 @@ export const createAskQuestionState = (): TutorState => ({
       "ASK_QUESTION",
     );
     await ctx.questionAsker.ask(ctx.bot, question);
-    await ctx.appendChatMessage("bot", ctx.config.botUsername, `Question: ${question.prompt}`);
-    await ctx.appendChatMessage("bot", ctx.config.botUsername, "Type your answer in chat when you're ready.");
+    await ctx.appendChatMessage("bot", ctx.config.botUsername, `Question: ${question.prompt}. Type your answer in chat when you're ready.`);
   },
   async onTick(ctx) {
     const question = getCurrentQuestion(ctx);

@@ -4,6 +4,7 @@ import express from "express";
 import { config, frontendOrigins } from "./config.js";
 import { demoRouter } from "./routes/demo.js";
 import { internalRouter } from "./routes/internal.js";
+import { promptsRouter } from "./routes/prompts.js";
 import { sessionRouter } from "./routes/session.js";
 import { streamRouter } from "./routes/stream.js";
 import { uploadRouter } from "./routes/upload.js";
@@ -32,6 +33,7 @@ app.get("/health", (_req, res) => {
 
 app.use("/api/upload", uploadRouter);
 app.use("/api/demo", demoRouter);
+app.use("/api/prompts", promptsRouter);
 app.use("/api/sessions", sessionRouter);
 app.use("/api/sessions", streamRouter);
 app.use("/internal", internalRouter);

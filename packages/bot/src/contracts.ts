@@ -11,7 +11,14 @@ export type TutorStateName =
   | "EVALUATE_ANSWER"
   | "MONITOR_OBJECTIVE"
   | "CLIMAX_RECAP"
-  | "END_SESSION";
+  | "END_SESSION"
+  // Library of Alexandria demo (scripted)
+  | "ALEX_INTRO"
+  | "ALEX_SHELVES"
+  | "ALEX_PEDESTAL_INTRO"
+  | "ALEX_WAIT_SCROLL"
+  | "ALEX_SUCCESS"
+  | "ALEX_OUTRO";
 
 export interface SceneRegion {
   id: string;
@@ -101,6 +108,8 @@ export interface BuildPlan {
     max: Vector3Like;
   };
   spawnPoint: Vector3Like;
+  /** When set (e.g. Alexandria demo), tutor teleports here instead of spawnPoint + 5 Z. */
+  tutorSpawn?: Vector3Like;
   palette: string[];
   placements: BuildTemplatePlacement[];
   regionCenters: Record<string, Vector3Like>;

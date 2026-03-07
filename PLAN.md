@@ -1,12 +1,9 @@
 # QuizCraft: Doc-to-Minecraft Historical Learning Agent
 
-## Aqua Roma demo (branch: `feature/aqua-roma-hardcoded`)
+## Demo
 
-Hardcoded 3–5 minute vertical slice: Roman aqueduct guided tour + one simple puzzle. No procedural generation.
+Aqua Roma demo removed. Next: Library of Alexandria (restore the scrolls) — hardcoded scene + scripted tutor when spec is ready.
 
-- **Spec and checklists:** `docs/AQUA_ROMA_SPEC.md`
-- **Experience package (shared):** `packages/shared/src/plans/aqua-roma-experience.ts` — export `AQUA_ROMA_EXPERIENCE`
-- **Build plan (bot):** `packages/bot/src/plans/aqua-roma-build.ts` — export `AQUA_ROMA_BUILD_PLAN`
 
 To run the demo, wire a “demo mode” that loads these plans instead of calling the experience planner and scene builder (e.g. create session with this experience and build plan pre-set).
 

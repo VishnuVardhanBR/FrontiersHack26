@@ -79,3 +79,19 @@ export const createRubblePile = (origin: Vector3Like, palette: string[]): BlockP
     { x: origin.x, y: origin.y + 1, z: origin.z, block: base },
   ];
 };
+
+/** Glowing door/portal at player spawn. Frame with sea lanterns; player spawns in front, ~1.5s walk to first action point. */
+export const createSpawnPortal = (origin: Vector3Like): BlockPlacement[] => {
+  const frame = "minecraft:stone_bricks";
+  const glow = "minecraft:sea_lantern";
+  const air = "minecraft:air";
+  const placements: BlockPlacement[] = [];
+  const { x, y, z } = origin;
+  pushCuboid(placements, { x: x - 1, y, z }, { x: x - 1, y: y + 2, z }, frame);
+  pushCuboid(placements, { x: x + 1, y, z }, { x: x + 1, y: y + 2, z }, frame);
+  pushCuboid(placements, { x: x - 1, y: y + 3, z }, { x: x + 1, y: y + 3, z }, frame);
+  placements.push({ x: x - 1, y, z, block: glow }, { x: x + 1, y, z, block: glow });
+  placements.push({ x: x - 1, y: y + 3, z, block: glow }, { x: x + 1, y: y + 3, z, block: glow });
+  placements.push({ x, y: y + 1, z, block: air }, { x, y: y + 2, z, block: air });
+  return placements;
+};

@@ -1,4 +1,5 @@
 import type { SessionState } from "../../contracts.js";
+import { getTutorSpawnPosition } from "../../builder/scene-builder.js";
 import { transition } from "../helpers.js";
 import { TutorState } from "../tutor-fsm.js";
 
@@ -62,6 +63,12 @@ export const createBuildSceneState = (): TutorState => ({
         buildSummary: result.buildSummary,
       };
       ctx.memory.buildComplete = true;
+
+      const spawn = result.buildPlan.spawnPoint;
+      ctx.bot.chat(`/setworldspawn ${spawn.x} ${spawn.y} ${spawn.z}`);
+      const tutorPos = getTutorSpawnPosition(result.buildPlan);
+      ctx.bot.chat(`/tp @s ${tutorPos.x} ${tutorPos.y} ${tutorPos.z}`);
+
       await ctx.persistState(
         {
           status: "waiting_for_player",

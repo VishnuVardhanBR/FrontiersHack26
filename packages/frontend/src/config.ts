@@ -5,13 +5,16 @@ export const appConfig = {
   get uploadUrl() {
     return `${this.apiBaseUrl}/api/upload`;
   },
-  get demoAquaRomaUrl() {
-    return `${this.apiBaseUrl}/api/demo/aqua-roma`;
+  get promptsUrl() {
+    return `${this.apiBaseUrl}/api/prompts`;
   },
   sessionUrl(sessionId: string) {
     return `${this.apiBaseUrl}/api/sessions/${sessionId}`;
   },
   streamUrl(sessionId: string) {
     return `${this.apiBaseUrl}/api/sessions/${sessionId}/stream`;
+  },
+  get libraryAlexandriaDemoUrl() {
+    return `${this.apiBaseUrl}/api/demo/library-alexandria`;
   },
 };

@@ -1,5 +1,5 @@
 import {
-  BuildPlanSchema,
+  type BuildPlan,
   BuildProgressSchema,
   ChatMessageSchema,
   QuestionAttemptSchema,
@@ -22,11 +22,14 @@ const BotSessionPatchSchema = z.object({
   errorMessage: z.string().min(1).nullable().optional(),
 });
 
+/** Accept bot's build plan shape (clearBounds, placements, regionCenters, etc.). */
+const BuildPlanLooseSchema = z.record(z.unknown()).optional();
+
 const BotUpdateSchema = z.object({
   status: SessionStatusSchema.optional(),
   statusMessage: z.string().min(1).optional(),
   patch: BotSessionPatchSchema.optional(),
-  buildPlan: BuildPlanSchema.optional(),
+  buildPlan: BuildPlanLooseSchema,
   buildProgress: BuildProgressSchema.optional(),
   chatMessage: ChatMessageSchema.optional(),
   summary: SessionSummarySchema.optional(),
@@ -62,7 +65,7 @@ internalRouter.post("/bot/sessions/:id/update", async (req, res, next) => {
     }
 
     if (body.buildPlan) {
-      await botBridgeService.publishBuildPlan(sessionId, body.buildPlan);
+      await botBridgeService.publishBuildPlan(sessionId, body.buildPlan as BuildPlan);
     }
 
     if (body.buildProgress) {

@@ -13,6 +13,12 @@ import { TriggerMonitor } from "./navigation/trigger-monitor.js";
 import { TutorFSM } from "./fsm/tutor-fsm.js";
 import type { TutorContext } from "./fsm/tutor-fsm.js";
 import {
+  createAlexandriaIntroState,
+  createAlexandriaOutroState,
+  createAlexandriaPedestalIntroState,
+  createAlexandriaShelvesState,
+  createAlexandriaSuccessState,
+  createAlexandriaWaitScrollState,
   createAskQuestionState,
   createBuildSceneState,
   createClimaxRecapState,
@@ -161,6 +167,12 @@ export class SessionRunner {
         MONITOR_OBJECTIVE: createMonitorObjectiveState(),
         CLIMAX_RECAP: createClimaxRecapState(),
         END_SESSION: createEndSessionState(),
+        ALEX_INTRO: createAlexandriaIntroState(),
+        ALEX_SHELVES: createAlexandriaShelvesState(),
+        ALEX_PEDESTAL_INTRO: createAlexandriaPedestalIntroState(),
+        ALEX_WAIT_SCROLL: createAlexandriaWaitScrollState(),
+        ALEX_SUCCESS: createAlexandriaSuccessState(),
+        ALEX_OUTRO: createAlexandriaOutroState(),
       },
       "IDLE",
       ctx,
@@ -173,7 +185,14 @@ export class SessionRunner {
       void fsm.handleChat(username, message);
     };
 
+    const onEnded = (reason: string) => {
+      ctx.memory.completed = true;
+      void ctx.emitEvent("error", { message: `Tutor disconnected: ${reason}` });
+      void fsm.stop();
+    };
+
     this.options.manager.on("chat", onChat);
+    this.options.manager.on("ended", onEnded);
 
     try {
       await fsm.start();
@@ -182,6 +201,7 @@ export class SessionRunner {
       }
     } finally {
       this.options.manager.off("chat", onChat);
+      this.options.manager.off("ended", onEnded);
       await fsm.stop();
     }
   }
