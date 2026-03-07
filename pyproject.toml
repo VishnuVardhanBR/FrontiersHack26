@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lorecraft-model1"
+version = "0.1.0"
+description = "Model 1 planner agent for doc-to-Minecraft historical experiences."
+requires-python = ">=3.12,<4.0"
+dependencies = [
+  "atomic-agents>=2.7.1,<3.0.0",
+  "instructor>=1.6.0",
+  "openai>=1.54.0",
+  "pydantic>=2.9.0",
+]
+
+[project.scripts]
+lorecraft-model1 = "lorecraft_model1.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

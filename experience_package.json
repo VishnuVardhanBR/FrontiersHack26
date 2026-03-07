@@ -1,0 +1,221 @@
+{
+  "experience_id": "pompeii_destruction_79ad",
+  "title": "The Frozen City: Pompeii's Last Day",
+  "grade_band": "middle school",
+  "duration_minutes": 6,
+  "learning_objectives": [
+    "Identify the year and primary cause of Pompeii's destruction.",
+    "Explain how volcanic ash acted as a preservative for Roman artifacts.",
+    "Distinguish between pyroclastic surges and liquid lava flows.",
+    "Recognize the importance of Pliny the Younger's eyewitness account."
+  ],
+  "historical_summary": "In 79 AD, Mount Vesuvius erupted, burying the Roman city of Pompeii under meters of ash and pumice. Unlike many disasters, the rapid burial preserved the city's buildings, art, and even the voids left by its inhabitants, providing a unique archaeological record. Pliny the Younger provided the only surviving eyewitness account, describing the 'umbrella pine' shape of the eruption cloud.",
+  "source_grounding": {
+    "grounded_facts": [
+      "The eruption of Mount Vesuvius occurred in 79 AD.",
+      "Pompeii was buried by ash and pumice, not slow-moving lava rivers.",
+      "Pliny the Younger wrote the only surviving eyewitness account of the event.",
+      "The city was rediscovered and formal excavations began in 1748."
+    ],
+    "creative_dramatization": [
+      "The student acts as an assistant to a scholar investigating the ruins.",
+      "Visual representation of the 'ash cloud' using gray wool and smoke particles.",
+      "Narrative dialogue used to guide the student through temporal shifts from 79 AD to 1748."
+    ],
+    "symbolic_gameplay_elements": [
+      "Gray wool blocks represent volcanic ash layers.",
+      "A 'Roman Amphora' item represents the preserved commerce of the city.",
+      "Localized regions representing different stages of the eruption and excavation."
+    ]
+  },
+  "creative_license": {
+    "enabled": true,
+    "notes": "The scene uses a 'time-jump' mechanic where the student moves from a clean Roman market to a buried version of the same street to emphasize the preservation effect."
+  },
+  "scene_spec": {
+    "theme": "Roman Urban Ruins and Volcanic Aftermath",
+    "size": "medium",
+    "world_constraints": [
+      "No liquid lava flows allowed; use fire and smoke particles for atmosphere.",
+      "Build area limited to 80x80 around origin.",
+      "Superflat world with sandstone and gravel base."
+    ],
+    "regions": [
+      {
+        "id": "market_square",
+        "purpose": "Introduce Roman daily life before the disaster.",
+        "description": "A vibrant Roman market with white pillars and colorful stalls.",
+        "build_grammar_tokens": [
+          "quartz_pillar_colonnade",
+          "wool_market_stalls",
+          "stone_brick_pavement"
+        ],
+        "anchor_facts": [
+          "Pompeii was a thriving Roman hub of commerce and art.",
+          "Citizens initially thought Vesuvius was just a mountain."
+        ],
+        "trigger_label": "Arrival at Market"
+      },
+      {
+        "id": "ash_fall_zone",
+        "purpose": "Demonstrate the immediate impact of the eruption.",
+        "description": "The same market area but covered in gray wool 'ash' and gravel 'pumice'.",
+        "build_grammar_tokens": [
+          "gray_wool_layers",
+          "gravel_piles",
+          "cobweb_smoke_particles"
+        ],
+        "anchor_facts": [
+          "The city was buried by heavy pumice stones and thick ash.",
+          "The eruption lasted for approximately two days."
+        ],
+        "trigger_label": "Eruption Start"
+      },
+      {
+        "id": "excavation_site",
+        "purpose": "Show the 18th-century rediscovery and archaeological process.",
+        "description": "A partially excavated trench showing the preserved layers underneath.",
+        "build_grammar_tokens": [
+          "dirt_trench_walls",
+          "exposed_quartz_ruins",
+          "wooden_scaffolding"
+        ],
+        "anchor_facts": [
+          "Pompeii was 'frozen in time' for nearly 1,700 years.",
+          "Formal excavations began in 1748, revealing daily Roman life."
+        ],
+        "trigger_label": "Modern Discovery"
+      }
+    ]
+  },
+  "student_objective": {
+    "type": "find_item",
+    "item_name": "flower_pot",
+    "narrative_label": "Roman Amphora",
+    "placement_rule": "Hidden inside a chest under a layer of gray wool in the excavation_site region."
+  },
+  "dialogue_plan": [
+    {
+      "beat_id": "d1",
+      "region_id": "market_square",
+      "narration": "Welcome to Pompeii, 79 AD. Life is busy here, and that mountain, Vesuvius, looks so peaceful... for now.",
+      "learning_purpose": "Set the historical context of the city before the event."
+    },
+    {
+      "beat_id": "d2",
+      "region_id": "ash_fall_zone",
+      "narration": "The sky has turned black! It isn't lava burning the city, but a rain of hot ash and pumice stones.",
+      "learning_purpose": "Correct common misconceptions about the type of volcanic destruction."
+    },
+    {
+      "beat_id": "d3",
+      "region_id": "excavation_site",
+      "narration": "Centuries later, we dig. The ash that destroyed the city also saved it by keeping oxygen away from these artifacts.",
+      "learning_purpose": "Explain the concept of archaeological preservation."
+    }
+  ],
+  "question_plan": [
+    {
+      "question_id": "q1",
+      "region_id": "market_square",
+      "question_type": "factual_recall",
+      "prompt": "In what year did the great eruption of Mount Vesuvius occur?",
+      "accepted_concepts": [
+        "79 AD",
+        "79",
+        "seventy-nine"
+      ],
+      "first_hint": "It was during the first century of the Roman Empire."
+    },
+    {
+      "question_id": "q2",
+      "region_id": "ash_fall_zone",
+      "question_type": "cause_effect",
+      "prompt": "Pompeii was buried by ash and pumice. Why didn't the artifacts rot away over 1,700 years?",
+      "accepted_concepts": [
+        "sealed from oxygen",
+        "preserved by ash",
+        "no air",
+        "ash acted as a seal"
+      ],
+      "first_hint": "Think about what materials need to break down—usually they need air or oxygen."
+    },
+    {
+      "question_id": "q3",
+      "region_id": "ash_fall_zone",
+      "question_type": "location_linked",
+      "prompt": "Look at the mountain. What is the name of this volcano that caused the destruction?",
+      "accepted_concepts": [
+        "Vesuvius",
+        "Mount Vesuvius",
+        "Mt Vesuvius"
+      ],
+      "first_hint": "It starts with a 'V' and looms over the Bay of Naples."
+    },
+    {
+      "question_id": "q4",
+      "region_id": "excavation_site",
+      "question_type": "recap",
+      "prompt": "Who is the famous Roman writer whose letters gave us an eyewitness account of the eruption?",
+      "accepted_concepts": [
+        "Pliny",
+        "Pliny the Younger",
+        "Gaius Plinius"
+      ],
+      "first_hint": "He shared his name with his uncle, a famous naturalist, but we call him 'the Younger'."
+    }
+  ],
+  "trigger_plan": [
+    {
+      "trigger_id": "t1",
+      "trigger_type": "enter_region_radius",
+      "condition": "Player enters market_square",
+      "effect": "Start dialogue beat d1 and unlock q1."
+    },
+    {
+      "trigger_id": "t2",
+      "trigger_type": "enter_region_radius",
+      "condition": "Player enters ash_fall_zone",
+      "effect": "Start dialogue beat d2 and unlock q2 and q3."
+    },
+    {
+      "trigger_id": "t3",
+      "trigger_type": "item_found",
+      "condition": "Player finds the Roman Amphora",
+      "effect": "Provide a hint that artifacts like this were found in the 1748 excavations."
+    },
+    {
+      "trigger_id": "t4",
+      "trigger_type": "enter_region_radius",
+      "condition": "Player enters excavation_site",
+      "effect": "Start dialogue beat d3 and unlock q4."
+    },
+    {
+      "trigger_id": "t5",
+      "trigger_type": "final_region_reached",
+      "condition": "All questions answered and item found in excavation_site",
+      "effect": "Display success message: 'You have uncovered the secrets of the frozen city!'"
+    }
+  ],
+  "success_conditions": [
+    "Identify Mount Vesuvius and the year 79 AD correctly.",
+    "Locate the 'Roman Amphora' artifact hidden in the ash layers.",
+    "Correctly explain that ash preservation requires sealing out oxygen.",
+    "Complete the final recap question about Pliny the Younger."
+  ],
+  "fallback_hints": [
+    "The city was Roman, look for the white pillars to find the market.",
+    "The 'ash' is represented by gray wool—try looking beneath it.",
+    "If you're stuck, remember that Vesuvius is a volcano, not just a mountain."
+  ],
+  "factual_grounding_notes": [
+    "Ensured no lava blocks were used in the build as Pompeii was buried by pyroclastic fall and surges.",
+    "Used the specific start date of formal excavations (1748) for the final region's context.",
+    "Verified Pliny the Younger's role as the primary historical source for the event's details."
+  ],
+  "build_constraints": [
+    "Max height of 30 blocks for structures.",
+    "Market stalls must be made of wool and fences.",
+    "Ash layers must be traversable (slabs or non-solid blocks where possible)."
+  ]
+}

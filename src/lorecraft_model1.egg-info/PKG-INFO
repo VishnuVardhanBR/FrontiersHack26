@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: lorecraft-model1
+Version: 0.1.0
+Summary: Model 1 planner agent for doc-to-Minecraft historical experiences.
+Requires-Python: <4.0,>=3.12
+Requires-Dist: atomic-agents<3.0.0,>=2.7.1
+Requires-Dist: instructor>=1.6.0
+Requires-Dist: openai>=1.54.0
+Requires-Dist: pydantic>=2.9.0
