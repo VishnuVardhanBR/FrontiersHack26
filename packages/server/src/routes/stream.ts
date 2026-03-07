@@ -1,9 +1,18 @@
+import type { Response } from "express";
 import { Router } from "express";
 
-import { eventBuffer, sessionService } from "../services/app-services.js";
+import { sessionService } from "../services/app-services.js";
 
-const writeEvent = (res: Parameters<Router["get"]>[1], event: unknown) => {
-  (res as unknown as { write: (chunk: string) => void }).write(`data: ${JSON.stringify(event)}\n\n`);
+const writeEvent = (
+  res: Response,
+  event: { type?: string } & Record<string, unknown>,
+) => {
+  const chunks = [];
+  if (typeof event.type === "string" && event.type.trim()) {
+    chunks.push(`event: ${event.type}`);
+  }
+  chunks.push(`data: ${JSON.stringify(event)}`);
+  (res as unknown as { write: (chunk: string) => void }).write(`${chunks.join("\n")}\n\n`);
 };
 
 export const streamRouter = Router();
@@ -21,22 +30,39 @@ streamRouter.get("/:id/stream", async (req, res, next) => {
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders?.();
 
-    const recentEvents = await eventBuffer.getRecentEvents(session.id);
-    for (const event of recentEvents) {
-      res.write(`data: ${JSON.stringify(event)}\n\n`);
-    }
+    let deliveredCount = 0;
 
-    const unsubscribe = await eventBuffer.subscribe(session.id, (event) => {
-      res.write(`data: ${JSON.stringify(event)}\n\n`);
-    });
+    const recentEvents = await sessionService.readEvents(session.id);
+    for (const event of recentEvents) {
+      writeEvent(res, event as unknown as { type?: string } & Record<string, unknown>);
+      deliveredCount += 1;
+    }
 
     const keepAlive = setInterval(() => {
       res.write(": keep-alive\n\n");
     }, 15000);
 
+    const poll = setInterval(async () => {
+      try {
+        const events = await sessionService.readEvents(session.id);
+        if (events.length <= deliveredCount) {
+          return;
+        }
+
+        for (const event of events.slice(deliveredCount)) {
+          writeEvent(res, event as unknown as { type?: string } & Record<string, unknown>);
+          deliveredCount += 1;
+        }
+      } catch {
+        clearInterval(poll);
+        clearInterval(keepAlive);
+        res.end();
+      }
+    }, 1000);
+
     req.on("close", () => {
+      clearInterval(poll);
       clearInterval(keepAlive);
-      unsubscribe();
       res.end();
     });
   } catch (error) {

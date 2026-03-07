@@ -412,7 +412,7 @@ export const normalizeSessionState = (input: unknown, idHint = "session"): Sessi
           ? raw.sourceExcerpt
           : undefined,
     experiencePackage,
-    buildPlan: raw.buildPlan as BuildPlan | undefined,
+    buildPlan: (raw.botBuildPlan ?? raw.buildPlan) as BuildPlan | undefined,
     buildSummary: raw.buildSummary as BuildSummary | undefined,
     buildProgress:
       raw.buildProgress && typeof raw.buildProgress === "object"
@@ -427,7 +427,7 @@ export const normalizeSessionState = (input: unknown, idHint = "session"): Sessi
             ? (raw.runtime as SessionRuntimeState | undefined)?.buildProgress
             : undefined,
     },
-    summary: raw.summary as SessionSummary | undefined,
+    summary: (raw.botSummary ?? raw.summary) as SessionSummary | undefined,
     chatLog: Array.isArray(raw.chatLog)
       ? (raw.chatLog as SessionState["chatLog"])
       : Array.isArray(raw.chat_log)

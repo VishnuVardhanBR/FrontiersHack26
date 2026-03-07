@@ -41,6 +41,25 @@ const unwrapSchema = (schema: ZodTypeAny): ZodTypeAny => {
   return schema;
 };
 
+const isRequiredField = (schema: ZodTypeAny): boolean => {
+  const typeName = schema._def.typeName;
+
+  if (
+    typeName === ZodFirstPartyTypeKind.ZodOptional ||
+    typeName === ZodFirstPartyTypeKind.ZodDefault
+  ) {
+    return false;
+  }
+
+  if (typeName === ZodFirstPartyTypeKind.ZodEffects) {
+    return isRequiredField(
+      ((schema as unknown as { _def: { schema?: ZodTypeAny } })._def.schema ?? schema) as ZodTypeAny,
+    );
+  }
+
+  return true;
+};
+
 const zodToGeminiSchema = (schema: ZodTypeAny): GeminiSchema => {
   const current = unwrapSchema(schema);
   const typeName = current._def.typeName;
@@ -54,7 +73,9 @@ const zodToGeminiSchema = (schema: ZodTypeAny): GeminiSchema => {
       return {
         type: "OBJECT",
         properties,
-        required: Object.keys(shape),
+        required: Object.entries(shape)
+          .filter(([, value]) => isRequiredField(value as ZodTypeAny))
+          .map(([key]) => key),
       };
     }
     case ZodFirstPartyTypeKind.ZodArray:
@@ -172,11 +193,11 @@ const normalizeGeminiError = (error: unknown, model: string): GeminiRequestError
 export class GeminiClient {
   private readonly client = config.geminiApiKey ? new GoogleGenerativeAI(config.geminiApiKey) : null;
 
-  async generateJSON<T>(
+  async generateRawJSON(
     systemInstruction: string,
     userPrompt: string,
-    schema: z.ZodSchema<T>,
-  ): Promise<T> {
+    schema: ZodTypeAny,
+  ): Promise<unknown> {
     if (!this.client) {
       throw new Error("GEMINI_API_KEY is not configured.");
     }
@@ -201,8 +222,7 @@ export class GeminiClient {
           "Gemini generateContent",
         );
         const text = stripJsonFences(result.response.text());
-        const json = JSON.parse(text) as unknown;
-        return schema.parse(json);
+        return JSON.parse(text) as unknown;
       } catch (error) {
         lastError = normalizeGeminiError(error, config.geminiModel);
         console.error(`[Gemini] attempt ${attempt}/${config.geminiMaxAttempts} failed: ${lastError.message}`);
@@ -222,5 +242,19 @@ export class GeminiClient {
     }
 
     throw lastError ?? new GeminiRequestError("Gemini generation failed.", "unknown", false);
+  }
+
+  async generateJSON<T>(
+    systemInstruction: string,
+    userPrompt: string,
+    schema: z.ZodSchema<T>,
+  ): Promise<T> {
+    const json = await this.generateRawJSON(
+      systemInstruction,
+      userPrompt,
+      schema as unknown as ZodTypeAny,
+    );
+
+    return schema.parse(json);
   }
 }

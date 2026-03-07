@@ -18,6 +18,10 @@ export class SessionFileRepository {
     return path.join(this.getSessionDir(sessionId), "events.ndjson");
   }
 
+  private getExperiencePath(sessionId: string): string {
+    return path.join(this.getSessionDir(sessionId), "experience-package.json");
+  }
+
   async ensureStorageRoot(): Promise<void> {
     await fs.mkdir(this.storageRoot, { recursive: true });
   }
@@ -44,7 +48,99 @@ export class SessionFileRepository {
   async save(session: SessionState): Promise<void> {
     const dir = this.getSessionDir(session.id);
     await fs.mkdir(dir, { recursive: true });
-    const payload = withTimestamp(session);
+    const now = new Date().toISOString();
+    const current = await this.readRawSession(session.id);
+    const canonicalExperience = await this.readCanonicalExperience(session.id);
+    const questionAttempts = session.summary
+      ? session.summary.questionBreakdown.map((question) => ({
+          questionId: question.questionId,
+          attempts: question.attempts,
+          hintsUsed: question.hintsUsed,
+          correct: question.answeredCorrectly,
+          lastAnswer: question.answer,
+        }))
+      : Array.isArray(current?.questionAttempts)
+        ? current.questionAttempts
+        : [];
+
+    const payload = withTimestamp({
+      ...(current ?? {}),
+      id: session.id,
+      title:
+        typeof current?.title === "string"
+          ? current.title
+          : session.experiencePackage.title,
+      sourceFileName:
+        typeof current?.sourceFileName === "string"
+          ? current.sourceFileName
+          : "source.txt",
+      sourceFileType:
+        typeof current?.sourceFileType === "string"
+          ? current.sourceFileType
+          : "txt",
+      teacherOptions:
+        current?.teacherOptions
+        ?? session.teacherSettings
+        ?? {
+          gradeLevel: "6-8",
+          topic: session.experiencePackage.title,
+          questionCount: Math.max(3, session.experiencePackage.questionPlan.length || 3),
+          objectiveEmphasis: "guided-tour",
+        },
+      sourceTextPath:
+        typeof current?.sourceTextPath === "string"
+          ? current.sourceTextPath
+          : path.join(dir, "source.txt"),
+      experiencePackage: canonicalExperience ?? current?.experiencePackage ?? null,
+      buildPlan: current?.buildPlan ?? null,
+      buildProgress:
+        session.buildProgress
+        ?? current?.buildProgress
+        ?? {
+          completedCommands: 0,
+          totalCommands: 0,
+          percent: 0,
+          currentStep: "Waiting to build",
+        },
+      currentRegionId: session.runtime?.activeRegionId ?? current?.currentRegionId ?? null,
+      activeQuestionIndex: current?.activeQuestionIndex ?? 0,
+      objectiveFound: session.runtime?.itemFound ?? current?.objectiveFound ?? false,
+      questionAttempts,
+      chatLog: session.chatLog ?? current?.chatLog ?? [],
+      summary: session.summary
+        ? {
+            score: session.summary.scorePercent,
+            correctAnswers: session.summary.answeredCorrectly,
+            totalQuestions: session.summary.totalQuestions,
+            totalHintsUsed: session.summary.totalHintsUsed,
+            totalDurationSeconds: Math.round(session.summary.durationMs / 1000),
+            questionBreakdown: questionAttempts,
+            recap: session.summary.strengths[0] ?? "Session complete.",
+          }
+        : current?.summary ?? null,
+      errorMessage:
+        session.status === "error"
+          ? typeof current?.errorMessage === "string"
+            ? current.errorMessage
+            : "The tutor bot reported an unexpected error."
+          : current?.errorMessage ?? null,
+      claimedBy: session.claimedBy ?? current?.claimedBy ?? null,
+      lastHeartbeatAt: now,
+      botBuildPlan: session.buildPlan ?? current?.botBuildPlan ?? null,
+      buildSummary: session.buildSummary ?? current?.buildSummary ?? null,
+      runtime: session.runtime ?? current?.runtime ?? {},
+      botSummary: session.summary ?? current?.botSummary ?? null,
+      createdAt:
+        typeof current?.createdAt === "string"
+          ? current.createdAt
+          : session.createdAt ?? now,
+      claimedAt:
+        typeof current?.claimedAt === "string"
+          ? current.claimedAt
+          : session.claimedAt,
+      status: session.status,
+    });
+
     await fs.writeFile(this.getSessionPath(session.id), JSON.stringify(payload, null, 2));
   }
 
@@ -174,6 +270,32 @@ export class SessionFileRepository {
             message: String(event.payload.message ?? "Unexpected bot error."),
           },
         };
+    }
+  }
+
+  private async readCanonicalExperience(sessionId: string): Promise<Record<string, unknown> | null> {
+    try {
+      const raw = await fs.readFile(this.getExperiencePath(sessionId), "utf8");
+      return JSON.parse(raw) as Record<string, unknown>;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        return null;
+      }
+
+      throw error;
+    }
+  }
+
+  private async readRawSession(sessionId: string): Promise<Record<string, any> | null> {
+    try {
+      const raw = await fs.readFile(this.getSessionPath(sessionId), "utf8");
+      return JSON.parse(raw) as Record<string, any>;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        return null;
+      }
+
+      throw error;
     }
   }
 }
