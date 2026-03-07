@@ -1,5 +1,17 @@
 # QuizCraft: Doc-to-Minecraft Historical Learning Agent
 
+## Aqua Roma demo (branch: `feature/aqua-roma-hardcoded`)
+
+Hardcoded 3–5 minute vertical slice: Roman aqueduct guided tour + one simple puzzle. No procedural generation.
+
+- **Spec and checklists:** `docs/AQUA_ROMA_SPEC.md`
+- **Experience package (shared):** `packages/shared/src/plans/aqua-roma-experience.ts` — export `AQUA_ROMA_EXPERIENCE`
+- **Build plan (bot):** `packages/bot/src/plans/aqua-roma-build.ts` — export `AQUA_ROMA_BUILD_PLAN`
+
+To run the demo, wire a “demo mode” that loads these plans instead of calling the experience planner and scene builder (e.g. create session with this experience and build plan pre-set).
+
+---
+
 ## Context
 
 Build a system that converts teacher-uploaded historical chapters into immersive Minecraft learning experiences. A student joins a locally hosted Minecraft world and is guided by a bot companion through a historically-inspired scene with narration, questions, and exploration objectives. Target: middle school learners, 5-7 minute sessions.
