@@ -1,0 +1,15 @@
+level-type=minecraft\:flat
+gamemode=creative
+difficulty=peaceful
+online-mode=false
+enforce-secure-profile=false
+spawn-protection=0
+enable-command-block=true
+pvp=false
+generate-structures=false
+motd=QuizCraft Local Server
+view-distance=8
+simulation-distance=6
+allow-flight=true
+white-list=false
+max-players=10

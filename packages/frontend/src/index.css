@@ -1,0 +1,237 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --page-bg: #f4ead4;
+    --page-bg-deep: #dbc7a4;
+    --ink: #241a17;
+    --ink-soft: rgba(36, 26, 23, 0.72);
+    --panel-bg: rgba(255, 250, 241, 0.74);
+    --panel-border: rgba(36, 26, 23, 0.08);
+  }
+
+  * {
+    border-color: rgb(36 26 23 / 0.1);
+  }
+
+  html {
+    @apply bg-parchment;
+  }
+
+  body {
+    @apply min-h-screen font-body text-basalt antialiased;
+    background:
+      radial-gradient(circle at top left, rgba(200, 95, 61, 0.22), transparent 30%),
+      radial-gradient(circle at top right, rgba(191, 138, 45, 0.18), transparent 22%),
+      linear-gradient(180deg, var(--page-bg) 0%, #f8f1e1 48%, var(--page-bg-deep) 100%);
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.22;
+    background-image:
+      linear-gradient(rgba(36, 26, 23, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(36, 26, 23, 0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(circle at center, black 24%, transparent 92%);
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    @apply font-body;
+  }
+}
+
+@layer components {
+  .app-shell {
+    @apply min-h-screen;
+  }
+
+  .panel {
+    @apply rounded-[32px] border px-5 py-5 shadow-ember backdrop-blur-xl sm:px-6 sm:py-6;
+    background: var(--panel-bg);
+    border-color: var(--panel-border);
+  }
+
+  .panel-tight {
+    @apply rounded-[28px] border px-5 py-5 shadow-ember backdrop-blur-xl sm:px-5;
+    background: var(--panel-bg);
+    border-color: var(--panel-border);
+  }
+
+  .feature-card {
+    @apply rounded-[26px] border p-5 shadow-sm;
+    border-color: rgb(36 26 23 / 0.08);
+    background-color: rgb(255 255 255 / 0.55);
+  }
+
+  .dropzone {
+    @apply flex min-h-[220px] cursor-pointer items-center justify-center rounded-[30px] border border-dashed px-6 py-8 transition duration-300;
+    border-color: rgb(36 26 23 / 0.16);
+    background-color: rgb(255 255 255 / 0.52);
+  }
+
+  .dropzone:hover {
+    border-color: rgb(200 95 61 / 0.3);
+    background-color: rgb(255 255 255 / 0.68);
+  }
+
+  .dropzone-active {
+    border-color: rgb(200 95 61 / 0.45);
+    background-color: rgb(200 95 61 / 0.08);
+  }
+
+  .field-shell {
+    @apply flex flex-col gap-2 rounded-[22px] border px-4 py-4;
+    border-color: rgb(36 26 23 / 0.08);
+    background-color: rgb(255 255 255 / 0.56);
+  }
+
+  .field-label {
+    @apply text-xs font-semibold uppercase tracking-[0.18em];
+    color: rgb(36 26 23 / 0.52);
+  }
+
+  .field-input {
+    @apply w-full border-0 bg-transparent p-0 text-sm text-basalt outline-none;
+  }
+
+  .field-input::placeholder {
+    color: rgb(36 26 23 / 0.38);
+  }
+
+  .range-input {
+    @apply h-2 w-full cursor-pointer appearance-none rounded-full accent-ember;
+    background-color: rgb(36 26 23 / 0.1);
+  }
+
+  .choice-card {
+    @apply flex cursor-pointer gap-3 rounded-[22px] border px-4 py-4 transition;
+    border-color: rgb(36 26 23 / 0.08);
+    background-color: rgb(255 255 255 / 0.56);
+  }
+
+  .choice-card:hover {
+    border-color: rgb(191 138 45 / 0.25);
+    background-color: rgb(255 255 255 / 0.72);
+  }
+
+  .choice-card-selected {
+    border-color: rgb(191 138 45 / 0.35);
+    background-color: rgb(191 138 45 / 0.1);
+  }
+
+  .cta-button {
+    @apply inline-flex items-center justify-center rounded-[22px] bg-basalt px-5 py-3.5 text-sm font-semibold text-parchment transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .cta-button:hover {
+    background-color: rgb(36 26 23 / 0.92);
+  }
+
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.22em];
+    color: rgb(36 26 23 / 0.48);
+  }
+
+  .progress-track {
+    @apply h-3 overflow-hidden rounded-full;
+    background-color: rgb(36 26 23 / 0.09);
+  }
+
+  .progress-fill {
+    @apply h-full rounded-full bg-gradient-to-r from-ember via-brass to-sage transition-all duration-500;
+  }
+
+  .status-pill {
+    @apply inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold;
+  }
+
+  .status-pill-open {
+    @apply text-sage;
+    background-color: rgb(111 130 99 / 0.12);
+  }
+
+  .status-pill-error {
+    @apply text-ember;
+    background-color: rgb(200 95 61 / 0.12);
+  }
+
+  .status-pill-muted {
+    color: rgb(36 26 23 / 0.6);
+    background-color: rgb(36 26 23 / 0.08);
+  }
+
+  .stat-card {
+    @apply flex items-center gap-3 rounded-[22px] border px-4 py-4;
+    border-color: rgb(36 26 23 / 0.08);
+    background-color: rgb(255 255 255 / 0.55);
+  }
+
+  .stat-label {
+    @apply text-xs uppercase tracking-[0.18em];
+    color: rgb(36 26 23 / 0.5);
+  }
+
+  .stat-value {
+    @apply mt-1 text-lg font-semibold text-basalt;
+  }
+
+  .list-row {
+    @apply flex gap-3 rounded-[20px] border px-4 py-3 text-sm leading-6;
+    border-color: rgb(36 26 23 / 0.08);
+    background-color: rgb(255 255 255 / 0.55);
+    color: rgb(36 26 23 / 0.76);
+  }
+
+  .message-shell {
+    @apply flex gap-3 rounded-[24px] border px-4 py-4;
+  }
+
+  .message-shell-bot {
+    border-color: rgb(36 26 23 / 0.08);
+    background-color: rgb(255 255 255 / 0.58);
+  }
+
+  .message-shell-student {
+    border-color: rgb(191 138 45 / 0.12);
+    background-color: rgb(191 138 45 / 0.08);
+  }
+
+  .message-shell-teacher {
+    border-color: rgb(111 130 99 / 0.12);
+    background-color: rgb(111 130 99 / 0.08);
+  }
+
+  .message-shell-system {
+    border-color: rgb(200 95 61 / 0.12);
+    background-color: rgb(200 95 61 / 0.07);
+  }
+
+  .summary-stat {
+    @apply flex items-center gap-3 rounded-[22px] border px-4 py-4;
+    border-color: rgb(36 26 23 / 0.08);
+    background-color: rgb(255 255 255 / 0.56);
+  }
+
+  .skeleton-line {
+    @apply animate-pulse rounded-full;
+    background-color: rgb(36 26 23 / 0.09);
+  }
+
+  .feed-fade {
+    mask-image: linear-gradient(to bottom, transparent, black 3%, black 96%, transparent);
+  }
+}

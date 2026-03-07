@@ -1,0 +1,31 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true,
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false,
+    "baseUrl": "../..",
+    "paths": {
+      "@quizcraft/shared": [
+        "packages/shared/src/index.ts"
+      ],
+      "@quizcraft/shared/*": [
+        "packages/shared/src/*"
+      ]
+    },
+    "types": [
+      "node"
+    ]
+  },
+  "references": [
+    {
+      "path": "../shared"
+    }
+  ],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts"
+  ]
+}
