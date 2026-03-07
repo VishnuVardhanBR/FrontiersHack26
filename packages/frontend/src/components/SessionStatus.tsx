@@ -1,6 +1,9 @@
+import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Compass, Construction, RadioTower, Sparkles, TimerReset } from 'lucide-react';
 
 import { humanize, type SessionRecord } from '@/lib/types';
+
+const ANIMATION_DURATION_MS = 1500;
 
 interface SessionStatusProps {
   lastEventAt: string | null;
@@ -9,21 +12,33 @@ interface SessionStatusProps {
   streamStatus: 'idle' | 'connecting' | 'open' | 'closed' | 'error';
 }
 
-const clamp = (value: number | undefined) => {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return 0;
-  }
-
-  return Math.max(0, Math.min(100, Math.round(value)));
-};
-
 export const SessionStatus = ({
   lastEventAt,
   session,
   streamError,
   streamStatus,
 }: SessionStatusProps) => {
-  const progress = clamp(session.buildProgress);
+  const [displayProgress, setDisplayProgress] = useState(0);
+  const animationStarted = useRef<string | null>(null);
+
+  // Animate progress bar from 0 to 100 over 1.5s when we have a session (scene is built in backend)
+  useEffect(() => {
+    if (!session?.id) return;
+    if (animationStarted.current === session.id) return;
+    animationStarted.current = session.id;
+    setDisplayProgress(0);
+    const start = performance.now();
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      const p = Math.min(100, (elapsed / ANIMATION_DURATION_MS) * 100);
+      setDisplayProgress(p);
+      if (p < 100) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [session?.id]);
+
+  const progress = Math.round(displayProgress);
+  const isReady = progress >= 100 || session.status === 'waiting_for_player';
   const experience = session.experiencePackage;
   const regions = experience?.sceneSpec?.regions ?? [];
   const questionCount = experience?.questionPlan?.length ?? session.summary?.totalQuestions ?? 0;
@@ -59,9 +74,12 @@ export const SessionStatus = ({
             <strong className="text-basalt">{progress}%</strong>
           </div>
           <div className="progress-track">
-            <div className="progress-fill" style={{ width: `${progress}%` }} />
+            <div
+              className="progress-fill transition-all duration-150 ease-out"
+              style={{ width: `${displayProgress}%` }}
+            />
           </div>
-          {progress >= 100 || session.status === 'waiting_for_player' ? (
+          {isReady ? (
             <div className="rounded-2xl border border-sage/40 bg-sage/15 px-4 py-4 text-center">
               <p className="text-lg font-semibold text-sage">Ready</p>
               <p className="mt-1 text-sm text-basalt/80">
