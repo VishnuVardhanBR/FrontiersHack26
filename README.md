@@ -1,11 +1,11 @@
 # QuizCraft
 
-QuizCraft turns a teacher-uploaded history chapter into a short Minecraft learning session. A local Mineflayer tutor bot builds a compact scene, narrates the lesson, escorts the player between regions, asks chat questions, and produces a session summary for the teacher dashboard.
+QuizCraft turns pasted history chapter text into a short Minecraft learning session. A local Mineflayer tutor bot builds a compact scene, narrates the lesson, escorts the player between regions, asks chat questions, and produces a session summary for the teacher dashboard.
 
 ## Workspace
 
 - `packages/shared`: shared schemas, types, and constants
-- `packages/server`: Express upload/session/SSE API and Gemini planner
+- `packages/server`: Express lesson/session/SSE API and Gemini planner
 - `packages/bot`: Mineflayer bot runtime, scene builder, and tutor FSM
 - `packages/frontend`: React teacher workflow UI
 - `mc-server`: local Minecraft server setup and launch scripts
@@ -63,7 +63,7 @@ npm run build
 ## Teacher Flow
 
 1. Open the frontend.
-2. Upload a `.txt`, `.pdf`, or `.docx` chapter.
+2. Paste a chapter or excerpt into the text field.
 3. Wait for the bot to claim the queued session and build the scene.
 4. Join the Minecraft server as the student.
 5. Follow the bot, answer questions in chat, and finish the recap.

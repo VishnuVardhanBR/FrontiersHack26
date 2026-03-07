@@ -92,7 +92,7 @@ export const SessionStatus = ({
         </div>
         <p className="mt-2 text-sm leading-6 text-basalt/72">
           {experience?.historicalSummary ??
-            'The planner is still turning the uploaded chapter into a scene brief, route, and question set.'}
+            'The planner is still turning the pasted chapter into a scene brief, route, and question set.'}
         </p>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">

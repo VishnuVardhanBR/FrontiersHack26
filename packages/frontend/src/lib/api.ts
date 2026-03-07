@@ -20,21 +20,23 @@ const assertJson = async (response: Response) => {
 };
 
 export const uploadChapter = async (values: UploadFormValues): Promise<UploadResponse> => {
-  if (!values.file) {
-    throw new Error('Choose a chapter file before starting.');
+  if (!values.chapterText.trim()) {
+    throw new Error('Paste chapter text before starting.');
   }
-
-  const formData = new FormData();
-  formData.set('file', values.file);
-  formData.set('gradeBand', values.gradeBand);
-  formData.set('topic', values.topic);
-  formData.set('questionCount', String(values.questionCount));
-  formData.set('objectiveEmphasis', values.objectiveEmphasis);
 
   const payload: any = await assertJson(
     await fetch(appConfig.uploadUrl, {
       method: 'POST',
-      body: formData,
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        chapterText: values.chapterText,
+        gradeBand: values.gradeBand,
+        topic: values.topic,
+        questionCount: values.questionCount,
+        objectiveEmphasis: values.objectiveEmphasis,
+      }),
     }),
   );
 

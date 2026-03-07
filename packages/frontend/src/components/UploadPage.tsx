@@ -1,15 +1,13 @@
 import { startTransition, useState } from 'react';
-import type { ChangeEvent, DragEvent, FormEvent } from 'react';
-import { Compass, Flame, MapPinned, ScrollText, Sparkles, UploadCloud } from 'lucide-react';
+import type { FormEvent } from 'react';
+import { Compass, Flame, MapPinned, ScrollText, Sparkles } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useUpload } from '@/hooks/use-upload';
 import type { UploadFormValues } from '@/lib/types';
 
-const ACCEPTED_FILE_TYPES = '.txt,.pdf,.doc,.docx';
-
 const initialForm: UploadFormValues = {
-  file: null,
+  chapterText: '',
   gradeBand: 'middle_school',
   topic: '',
   questionCount: 4,
@@ -40,28 +38,12 @@ export const UploadPage = () => {
   const { upload, uploadError, clearUploadError } = useUpload();
   const [form, setForm] = useState<UploadFormValues>(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const showResetNotice = searchParams.get('reset') === '1';
-
-  const setFile = (file: File | null) => {
-    clearUploadError();
-    setForm((current) => ({ ...current, file }));
-  };
-
-  const onFileInput = (event: ChangeEvent<HTMLInputElement>) => {
-    setFile(event.target.files?.[0] ?? null);
-  };
-
-  const onDrop = (event: DragEvent<HTMLLabelElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-    setFile(event.dataTransfer.files?.[0] ?? null);
-  };
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!form.file) {
+    if (!form.chapterText.trim()) {
       return;
     }
 
@@ -94,7 +76,7 @@ export const UploadPage = () => {
                     Turn a history chapter into a five-minute Minecraft expedition.
                   </h1>
                   <p className="max-w-2xl text-base leading-7 text-basalt/78 sm:text-lg">
-                    Upload a chapter, pick the teaching angle, and QuizCraft will generate a
+                    Paste a chapter, pick the teaching angle, and QuizCraft will generate a
                     compact scene, a guided bot companion, and live status updates for the whole
                     session.
                   </p>
@@ -106,7 +88,7 @@ export const UploadPage = () => {
                   <ScrollText className="h-6 w-6 text-ember" />
                   <h2 className="text-lg font-semibold text-basalt">Chapter aware</h2>
                   <p className="text-sm leading-6 text-basalt/72">
-                    Pulls key facts, landmarks, and questions straight from the teacher upload.
+                    Pulls key facts, landmarks, and questions straight from the pasted chapter.
                   </p>
                 </article>
                 <article className="feature-card animate-riseIn [animation-delay:160ms]">
@@ -131,7 +113,7 @@ export const UploadPage = () => {
                     <p className="text-xs uppercase tracking-[0.22em] text-parchment/65">
                       Recommended classroom flow
                     </p>
-                    <h2 className="mt-2 font-display text-2xl">Upload. Build. Join `localhost:25565`.</h2>
+                    <h2 className="mt-2 font-display text-2xl">Paste. Build. Join `localhost:25565`.</h2>
                   </div>
                   <div className="flex items-center gap-3 rounded-2xl bg-white/8 px-4 py-3 text-sm text-parchment/82">
                     <Flame className="h-5 w-5 animate-pulseGlow text-ember" />
@@ -148,8 +130,8 @@ export const UploadPage = () => {
                 <p className="eyebrow">Teacher Setup</p>
                 <h2 className="font-display text-3xl text-basalt">Launch a new experience</h2>
                 <p className="text-sm leading-6 text-basalt/72">
-                  Supported files: TXT, PDF, DOC, DOCX. The generated lesson will stay grounded in
-                  the source chapter but can add symbolic Minecraft-friendly details.
+                  Paste the chapter text below. The generated lesson will stay grounded in the
+                  source chapter but can add symbolic Minecraft-friendly details.
                 </p>
               </div>
 
@@ -166,35 +148,20 @@ export const UploadPage = () => {
                 </div>
               ) : null}
 
-              <label
-                className={`dropzone ${isDragging ? 'dropzone-active' : ''}`}
-                onDragEnter={() => setIsDragging(true)}
-                onDragLeave={() => setIsDragging(false)}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  setIsDragging(true);
-                }}
-                onDrop={onDrop}
-              >
-                <input
-                  accept={ACCEPTED_FILE_TYPES}
-                  className="sr-only"
-                  onChange={onFileInput}
-                  type="file"
+              <label className="field-shell">
+                <span className="field-label">Chapter text</span>
+                <textarea
+                  className="field-input min-h-64 resize-y"
+                  placeholder="Paste the full history chapter or excerpt here..."
+                  value={form.chapterText}
+                  onChange={(event) => {
+                    clearUploadError();
+                    setForm((current) => ({ ...current, chapterText: event.target.value }));
+                  }}
                 />
-                <div className="flex flex-col items-center gap-3 text-center">
-                  <div className="rounded-2xl bg-white/80 p-3 text-ember shadow-sm">
-                    <UploadCloud className="h-7 w-7" />
-                  </div>
-                  <div>
-                    <p className="text-base font-semibold text-basalt">
-                      {form.file ? form.file.name : 'Drop a chapter here or click to choose a file'}
-                    </p>
-                    <p className="mt-1 text-sm text-basalt/62">
-                      One chapter per session keeps the scene compact and coherent.
-                    </p>
-                  </div>
-                </div>
+                <span className="text-xs text-basalt/55">
+                  One coherent chapter or excerpt works best for a compact session.
+                </span>
               </label>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -289,7 +256,7 @@ export const UploadPage = () => {
 
               <button
                 className="cta-button"
-                disabled={!form.file || isSubmitting}
+                disabled={!form.chapterText.trim() || isSubmitting}
                 type="submit"
               >
                 {isSubmitting ? 'Preparing session...' : 'Generate Minecraft lesson'}

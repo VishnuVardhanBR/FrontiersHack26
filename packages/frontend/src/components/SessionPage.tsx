@@ -23,7 +23,7 @@ export const SessionPage = () => {
 
   const handleReset = async () => {
     const confirmed = window.confirm(
-      'Reset the local Minecraft server and end the current lesson? This will restart the world and take you back to upload.',
+      'Reset the local Minecraft server and end the current lesson? This will restart the world and take you back to lesson setup.',
     );
 
     if (!confirmed) {
@@ -54,7 +54,7 @@ export const SessionPage = () => {
             <ServerCrash className="mx-auto h-10 w-10 text-ember" />
             <h1 className="mt-4 font-display text-3xl text-basalt">Session id missing</h1>
             <p className="mt-3 text-sm leading-7 text-basalt/72">
-              Return to the upload screen and create a new lesson.
+              Return to lesson setup and create a new lesson.
             </p>
           </div>
         </div>
@@ -72,7 +72,7 @@ export const SessionPage = () => {
               to="/"
             >
               <ChevronLeft className="h-4 w-4" />
-              Back to upload
+              Back to setup
             </Link>
             <div>
               <p className="eyebrow">Session Monitor</p>

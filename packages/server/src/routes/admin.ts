@@ -9,7 +9,7 @@ adminRouter.post("/reset", async (_req, res, next) => {
     await serverResetService.resetForNewLesson();
     res.json({
       ok: true,
-      message: "Minecraft server reset. Start a new lesson from the upload screen.",
+      message: "Minecraft server reset. Start a new lesson from the setup screen.",
       restartedAt: new Date().toISOString(),
     });
   } catch (error) {

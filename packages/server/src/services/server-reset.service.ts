@@ -69,7 +69,7 @@ export class ServerResetService {
 
       await this.botBridgeService.failSession(
         session.id,
-        "Server reset requested from dashboard. Start a new lesson from the upload screen.",
+        "Server reset requested from dashboard. Start a new lesson from the setup screen.",
       );
     }
   }

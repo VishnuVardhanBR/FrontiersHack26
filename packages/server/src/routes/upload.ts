@@ -1,24 +1,13 @@
-import path from "node:path";
-
 import { TeacherOptionsSchema } from "@quizcraft/shared";
 import { Router } from "express";
-import multer from "multer";
+import { z } from "zod";
 
-import { config } from "../config.js";
 import { GeminiRequestError } from "../gemini/client.js";
 import {
   botBridgeService,
-  documentExtractorService,
   experiencePlannerService,
   sessionService,
 } from "../services/app-services.js";
-
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: config.maxUploadSizeBytes,
-  },
-});
 
 const parseTeacherOptions = (body: Record<string, unknown>) =>
   TeacherOptionsSchema.parse({
@@ -39,23 +28,22 @@ const parseTeacherOptions = (body: Record<string, unknown>) =>
         : undefined,
   });
 
+const CreateLessonSchema = z.object({
+  chapterText: z.string().trim().min(1, "Chapter text is required."),
+}).passthrough();
+
 export const uploadRouter = Router();
 
-uploadRouter.post("/", upload.single("file"), async (req, res, next) => {
+uploadRouter.post("/", async (req, res, next) => {
   let sessionId: string | null = null;
 
   try {
-    if (!req.file) {
-      res.status(400).json({ error: "A chapter file is required." });
-      return;
-    }
-
+    const body = CreateLessonSchema.parse(req.body as Record<string, unknown>);
     const teacherOptions = parseTeacherOptions(req.body as Record<string, unknown>);
-    const sourceFileType = path.extname(req.file.originalname).replace(".", "") || "txt";
 
     const session = await sessionService.createSession({
-      sourceFileName: req.file.originalname,
-      sourceFileType,
+      sourceFileName: "pasted-chapter.txt",
+      sourceFileType: "text",
       teacherOptions,
     });
     sessionId = session.id;
@@ -65,16 +53,15 @@ uploadRouter.post("/", upload.single("file"), async (req, res, next) => {
       timestamp: new Date().toISOString(),
       data: {
         status: "planning",
-        message: "Upload received. Extracting the chapter and planning the Minecraft lesson.",
+        message: "Chapter received. Planning the Minecraft lesson.",
       },
     });
 
-    const extractedText = await documentExtractorService.extractText(req.file);
-    await sessionService.saveSourceText(session.id, extractedText);
+    await sessionService.saveSourceText(session.id, body.chapterText);
 
     const experiencePackage = await experiencePlannerService.planExperience({
       sessionId: session.id,
-      chapterText: extractedText,
+      chapterText: body.chapterText,
       teacherOptions,
     });
 

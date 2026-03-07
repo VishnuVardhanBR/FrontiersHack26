@@ -84,7 +84,7 @@ export interface SessionRecord {
 }
 
 export interface UploadFormValues {
-  file: File | null;
+  chapterText: string;
   gradeBand: string;
   topic: string;
   questionCount: number;
