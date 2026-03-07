@@ -3,16 +3,15 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-JAR_SOURCE="${MC_SERVER_JAR_SOURCE:-/Users/vishnuvardhan/Downloads/server.jar}"
 BOT_NAME="${QUIZCRAFT_BOT_NAME:-QuizCraftTutor}"
 TARGET_JAR="$SCRIPT_DIR/server.jar"
 
-if [ ! -f "$JAR_SOURCE" ]; then
-  echo "Minecraft server jar not found at $JAR_SOURCE"
+if [ ! -f "$TARGET_JAR" ]; then
+  echo "Minecraft server jar not found at $TARGET_JAR"
+  echo "Keep the server jar in the repo at mc-server/server.jar and run setup again."
   exit 1
 fi
 
-cp "$JAR_SOURCE" "$TARGET_JAR"
 cp "$SCRIPT_DIR/server.properties.template" "$SCRIPT_DIR/server.properties"
 printf "eula=true\n" > "$SCRIPT_DIR/eula.txt"
 

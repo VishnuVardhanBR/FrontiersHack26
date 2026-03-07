@@ -1,19 +1,50 @@
-import { BookOpenText, ChevronLeft, Pickaxe, ServerCrash } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { startTransition, useState } from 'react';
+import { BookOpenText, ChevronLeft, Pickaxe, RotateCcw, ServerCrash } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { ChatLog } from '@/components/ChatLog';
 import { SessionStatus } from '@/components/SessionStatus';
 import { SessionSummary } from '@/components/SessionSummary';
 import { useSession } from '@/hooks/use-session';
 import { useStream } from '@/hooks/use-stream';
+import { resetServerForNewLesson } from '@/lib/api';
 import { humanize } from '@/lib/types';
 import { useQuizcraftStore } from '@/store';
 
 export const SessionPage = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { session, isLoading, error } = useSession(id);
   const { streamStatus, lastEventAt, error: streamError } = useStream(id);
   const streamEvents = useQuizcraftStore((store) => store.streamEvents);
+  const resetSession = useQuizcraftStore((store) => store.resetSession);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+
+  const handleReset = async () => {
+    const confirmed = window.confirm(
+      'Reset the local Minecraft server and end the current lesson? This will restart the world and take you back to upload.',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsResetting(true);
+    setResetError(null);
+
+    try {
+      await resetServerForNewLesson();
+      resetSession();
+      startTransition(() => {
+        navigate('/?reset=1');
+      });
+    } catch (nextError) {
+      setResetError(nextError instanceof Error ? nextError.message : 'Unable to reset the server');
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   if (!id) {
     return (
@@ -57,6 +88,15 @@ export const SessionPage = () => {
           </div>
 
           <div className="flex flex-wrap gap-3">
+            <button
+              className="inline-flex items-center gap-2 rounded-2xl border border-ember/25 bg-ember/10 px-4 py-3 text-sm font-semibold text-ember transition hover:bg-ember/15 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isResetting}
+              onClick={handleReset}
+              type="button"
+            >
+              <RotateCcw className="h-4 w-4" />
+              {isResetting ? 'Resetting server...' : 'Reset Server & Start New'}
+            </button>
             <div className="rounded-2xl border border-basalt/8 bg-white/60 px-4 py-3 text-sm text-basalt/72">
               <div className="inline-flex items-center gap-2 font-semibold text-basalt">
                 <BookOpenText className="h-4 w-4 text-brass" />
@@ -74,9 +114,9 @@ export const SessionPage = () => {
           </div>
         </header>
 
-        {error ? (
+        {error || resetError ? (
           <div className="rounded-[28px] border border-ember/20 bg-ember/8 px-5 py-4 text-sm text-ember">
-            {error}
+            {error ?? resetError}
           </div>
         ) : null}
 

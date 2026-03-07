@@ -55,6 +55,14 @@ export const uploadChapter = async (values: UploadFormValues): Promise<UploadRes
   };
 };
 
+export const resetServerForNewLesson = async (): Promise<void> => {
+  await assertJson(
+    await fetch(appConfig.resetUrl, {
+      method: 'POST',
+    }),
+  );
+};
+
 export const fetchSession = async (sessionId: string): Promise<SessionRecord> => {
   const payload: any = await assertJson(await fetch(appConfig.sessionUrl(sessionId)));
   return normalizeSession(payload?.session ?? payload);

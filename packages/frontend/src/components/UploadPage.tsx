@@ -1,7 +1,7 @@
 import { startTransition, useState } from 'react';
 import type { ChangeEvent, DragEvent, FormEvent } from 'react';
 import { Compass, Flame, MapPinned, ScrollText, Sparkles, UploadCloud } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useUpload } from '@/hooks/use-upload';
 import type { UploadFormValues } from '@/lib/types';
@@ -36,10 +36,12 @@ const emphasisOptions = [
 
 export const UploadPage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { upload, uploadError, clearUploadError } = useUpload();
   const [form, setForm] = useState<UploadFormValues>(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const showResetNotice = searchParams.get('reset') === '1';
 
   const setFile = (file: File | null) => {
     clearUploadError();
@@ -150,6 +152,19 @@ export const UploadPage = () => {
                   the source chapter but can add symbolic Minecraft-friendly details.
                 </p>
               </div>
+
+              {showResetNotice ? (
+                <div className="rounded-2xl border border-sage/25 bg-sage/10 px-4 py-3 text-sm text-basalt/78">
+                  Minecraft reset complete. Upload a new chapter to start the next lesson.
+                  <button
+                    className="ml-3 font-semibold text-basalt underline decoration-basalt/30 underline-offset-4"
+                    onClick={() => setSearchParams({}, { replace: true })}
+                    type="button"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              ) : null}
 
               <label
                 className={`dropzone ${isDragging ? 'dropzone-active' : ''}`}

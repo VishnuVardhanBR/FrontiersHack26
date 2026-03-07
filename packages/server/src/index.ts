@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 
 import { config, frontendOrigins } from "./config.js";
+import { adminRouter } from "./routes/admin.js";
 import { internalRouter } from "./routes/internal.js";
 import { sessionRouter } from "./routes/session.js";
 import { streamRouter } from "./routes/stream.js";
@@ -32,6 +33,7 @@ app.get("/health", (_req, res) => {
 app.use("/api/upload", uploadRouter);
 app.use("/api/sessions", sessionRouter);
 app.use("/api/sessions", streamRouter);
+app.use("/api/admin", adminRouter);
 app.use("/internal", internalRouter);
 
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

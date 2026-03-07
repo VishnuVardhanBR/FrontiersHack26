@@ -141,7 +141,7 @@ export class SessionFileRepository {
       status: session.status,
     });
 
-    await fs.writeFile(this.getSessionPath(session.id), JSON.stringify(payload, null, 2));
+    await this.writeJsonAtomic(this.getSessionPath(session.id), payload);
   }
 
   async appendEvent(event: SessionEvent): Promise<void> {
@@ -297,5 +297,11 @@ export class SessionFileRepository {
 
       throw error;
     }
+  }
+
+  private async writeJsonAtomic(filePath: string, value: unknown): Promise<void> {
+    const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+    await fs.writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`);
+    await fs.rename(tempPath, filePath);
   }
 }

@@ -5,6 +5,9 @@ export const appConfig = {
   get uploadUrl() {
     return `${this.apiBaseUrl}/api/upload`;
   },
+  get resetUrl() {
+    return `${this.apiBaseUrl}/api/admin/reset`;
+  },
   sessionUrl(sessionId: string) {
     return `${this.apiBaseUrl}/api/sessions/${sessionId}`;
   },

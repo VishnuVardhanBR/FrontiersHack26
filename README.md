@@ -14,7 +14,7 @@ QuizCraft turns a teacher-uploaded history chapter into a short Minecraft learni
 
 - Node.js 20+
 - Java 21+ for the Minecraft server jar
-- Minecraft server jar available at `/Users/vishnuvardhan/Downloads/server.jar` or override `MC_SERVER_JAR_SOURCE`
+- Minecraft server jar kept in the repo at `mc-server/server.jar`
 - Optional Gemini key in `.env` as `GEMINI_API_KEY`
 
 ## Setup

@@ -158,7 +158,18 @@ export class SessionService {
     const sessions = await Promise.all(
       entries
         .filter((entry) => entry.isDirectory())
-        .map((entry) => this.getSession(entry.name)),
+        .map(async (entry) => {
+          try {
+            return await this.getSession(entry.name);
+          } catch (error) {
+            console.warn(
+              `[sessions] skipping unreadable session ${entry.name}: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            );
+            return null;
+          }
+        }),
     );
 
     return sessions.filter((session): session is SessionState => session !== null);
@@ -183,6 +194,8 @@ export class SessionService {
   }
 
   private async writeJson(filePath: string, value: unknown): Promise<void> {
-    await fs.writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+    const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+    await fs.writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+    await fs.rename(tempPath, filePath);
   }
 }
