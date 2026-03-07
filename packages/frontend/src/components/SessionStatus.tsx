@@ -61,6 +61,14 @@ export const SessionStatus = ({
           <div className="progress-track">
             <div className="progress-fill" style={{ width: `${progress}%` }} />
           </div>
+          {progress >= 100 || session.status === 'waiting_for_player' ? (
+            <div className="rounded-2xl border border-sage/40 bg-sage/15 px-4 py-4 text-center">
+              <p className="text-lg font-semibold text-sage">Ready</p>
+              <p className="mt-1 text-sm text-basalt/80">
+                You can join the Minecraft server at <code className="rounded bg-basalt/10 px-1.5 py-0.5">localhost:25565</code> now.
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <dl className="mt-5 grid gap-3 text-sm text-basalt/74 sm:grid-cols-2">
