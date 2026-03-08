@@ -95,6 +95,9 @@ export class BotManager extends EventEmitter<BotManagerEvents> {
     bot.chat("/gamemode creative @s");
     bot.chat("/gamerule sendCommandFeedback false");
     bot.chat("/difficulty peaceful");
+    // Teleport above ground immediately — the minimal flat world spawns at y=-63
+    bot.chat("/tp @s 0 4 0");
+    bot.chat("/setworldspawn 0 4 0");
   }
 
   async disconnect(): Promise<void> {

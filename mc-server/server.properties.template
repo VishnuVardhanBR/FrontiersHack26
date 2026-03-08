@@ -1,5 +1,5 @@
 level-type=minecraft\:flat
-generator-settings={"layers":[{"block":"minecraft\:bedrock","height":1}],"biome":"minecraft\:plains","features":false,"structures":false}
+generator-settings={"layers":[{"block":"minecraft\:bedrock","height":1},{"block":"minecraft\:dirt","height":2},{"block":"minecraft\:grass_block","height":1}],"biome":"minecraft\:plains","features":false,"structures":false}
 gamemode=creative
 difficulty=peaceful
 online-mode=false

@@ -56,7 +56,7 @@ Egyptian Temple: Massive trapezoidal pylons (entrance), column hall with rows of
 8) Connect adjacent regions with 3-wide walkable paths (use gravel, stone_bricks, or similar).
 
 ═══ LAYOUT RULES ═══
-9) spawnPoint = { "x": 0, "y": 5, "z": 0 }
+9) spawnPoint = { "x": 0, "y": 4, "z": 0 }  (y=4 means feet on the ground block at y=3)
 10) All regionCenters and objectivePlacement.position: x/z in [-24, 24].
 11) Region center centroid must be centered:
     abs(mean(regionCenters.x)) <= 2 and abs(mean(regionCenters.z)) <= 2.
@@ -492,7 +492,7 @@ export class GeminiDirectBuilder {
     const buildPlan: BuildPlan = {
       theme: parsed.theme ?? experience.sceneSpec.theme,
       clearBounds: { min: { x: -50, y: 0, z: -50 }, max: { x: 50, y: 60, z: 50 } },
-      spawnPoint: { x: 0, y: parsed.spawnPoint?.y ?? 5, z: 0 },
+      spawnPoint: { x: 0, y: Math.max(parsed.spawnPoint?.y ?? 4, 4), z: 0 },
       palette: Array.isArray(parsed.palette) ? parsed.palette : experience.sceneSpec.palette ?? ["minecraft:stone_bricks"],
       placements: [],
       regionCenters,
