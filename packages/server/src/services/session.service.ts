@@ -13,6 +13,8 @@ import {
 } from "@quizcraft/shared";
 import { v4 as uuidv4 } from "uuid";
 
+import { SessionIdSchema } from "../http/session-id.js";
+
 export interface CreateSessionInput {
   sourceFileName: string;
   sourceFileType: string;
@@ -32,8 +34,12 @@ export class SessionService {
     await fs.mkdir(this.baseDir, { recursive: true });
   }
 
+  private parseSessionId(sessionId: string): string {
+    return SessionIdSchema.parse(sessionId);
+  }
+
   private sessionDir(sessionId: string): string {
-    return path.join(this.baseDir, sessionId);
+    return path.join(this.baseDir, this.parseSessionId(sessionId));
   }
 
   private sessionFile(sessionId: string): string {
@@ -157,7 +163,7 @@ export class SessionService {
     const entries = await fs.readdir(this.baseDir, { withFileTypes: true });
     const sessions = await Promise.all(
       entries
-        .filter((entry) => entry.isDirectory())
+        .filter((entry) => entry.isDirectory() && SessionIdSchema.safeParse(entry.name).success)
         .map((entry) => this.getSession(entry.name)),
     );
 

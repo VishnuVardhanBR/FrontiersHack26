@@ -9,4 +9,10 @@ if [ ! -f server.jar ]; then
   exit 1
 fi
 
+# Delete old world so every launch starts with a fresh flat world
+rm -rf world world_nether world_the_end
+
+# Re-apply template so server.properties always reflects the latest settings
+cp -f "$SCRIPT_DIR/server.properties.template" "$SCRIPT_DIR/server.properties"
+
 exec java -Xms1G -Xmx2G -jar server.jar nogui

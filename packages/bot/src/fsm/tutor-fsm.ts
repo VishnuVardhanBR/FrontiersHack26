@@ -91,6 +91,7 @@ export class TutorFSM {
   private running = false;
   private timer: NodeJS.Timeout | null = null;
   private queue: Promise<void> = Promise.resolve();
+  private fatalError: unknown | null = null;
 
   constructor(
     private readonly states: Record<TutorStateName, TutorState>,
@@ -139,6 +140,10 @@ export class TutorFSM {
     return this.ctx.memory.completed;
   }
 
+  getFatalError(): unknown | null {
+    return this.fatalError;
+  }
+
   async handleChat(username: string, message: string): Promise<void> {
     if (!this.running) {
       return;
@@ -155,7 +160,16 @@ export class TutorFSM {
 
   private async enqueue(task: () => Promise<void>): Promise<void> {
     this.queue = this.queue.then(task).catch((error) => {
-      err("fsm", "unhandled error in state", this.currentStateName, error);
+      if (!this.fatalError) {
+        this.fatalError = error;
+        err("fsm", "unhandled error in state", this.currentStateName, error);
+      }
+      this.running = false;
+      this.ctx.memory.completed = true;
+      if (this.timer) {
+        clearInterval(this.timer);
+        this.timer = null;
+      }
     });
     await this.queue;
   }

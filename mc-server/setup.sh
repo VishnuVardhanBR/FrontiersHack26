@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-JAR_SOURCE="${MC_SERVER_JAR_SOURCE:-/Users/aneeshsathe/Desktop/FrontiersHack26/server.jar}"
+JAR_SOURCE="${MC_SERVER_JAR_SOURCE:-$ROOT_DIR/server.jar}"
 BOT_NAME="${QUIZCRAFT_BOT_NAME:-QuizCraftTutor}"
 TARGET_JAR="$SCRIPT_DIR/server.jar"
 

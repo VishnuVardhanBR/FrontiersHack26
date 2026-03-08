@@ -22,6 +22,10 @@ export class SessionFileRepository {
     return path.join(this.getSessionDir(sessionId), "experience-package.json");
   }
 
+  private getClaimLockPath(sessionId: string): string {
+    return path.join(this.getSessionDir(sessionId), ".claim.lock");
+  }
+
   async ensureStorageRoot(): Promise<void> {
     await fs.mkdir(this.storageRoot, { recursive: true });
   }
@@ -122,8 +126,10 @@ export class SessionFileRepository {
         session.status === "error"
           ? typeof current?.errorMessage === "string"
             ? current.errorMessage
-            : "The tutor bot reported an unexpected error."
-          : current?.errorMessage ?? null,
+            : typeof session.errorMessage === "string" && session.errorMessage.trim().length > 0
+              ? session.errorMessage
+              : "The tutor bot reported an unexpected error."
+          : null,
       claimedBy: session.claimedBy ?? current?.claimedBy ?? null,
       lastHeartbeatAt: now,
       botBuildPlan: session.buildPlan ?? current?.botBuildPlan ?? null,
@@ -152,19 +158,17 @@ export class SessionFileRepository {
 
   async listAvailableSessions(
     botUsername: string,
-    options: { allowResumeIncomplete?: boolean } = {},
+    _options: { allowResumeIncomplete?: boolean } = {},
   ): Promise<SessionState[]> {
     const ids = await this.listSessionIds();
     const sessions = await Promise.all(ids.map((id) => this.load(id)));
-    const allowResumeIncomplete = Boolean(options.allowResumeIncomplete);
 
     // Staleness windows:
     // "queued"       — teacher pressed Start Build; valid for 30 min in case the
     //                  bot was briefly down when they clicked.
-    // mid-lesson     — bot crashed mid-lesson; only resume within 10 min so old
-    //                  sessions from previous runs never auto-restart.
+    // NOTE: resume pickup is intentionally disabled until the lifecycle is
+    // fully reliable end-to-end.
     const QUEUED_GRACE_MS     = 30 * 60 * 1000;
-    const MID_LESSON_GRACE_MS = 10 * 60 * 1000;
     const now = Date.now();
 
     const ageMs = (session: SessionState): number => {
@@ -178,27 +182,10 @@ export class SessionFileRepository {
         if (session.summary) return false;
         if (session.claimedBy && session.claimedBy !== botUsername) return false;
 
-        if (session.status === "queued") {
-          return ageMs(session) < QUEUED_GRACE_MS;
-        }
-
-        if (!allowResumeIncomplete) {
+        if (session.status !== "queued") {
           return false;
         }
-
-        const resumableStates = [
-          "building_scene",
-          "waiting_for_player",
-          "introducing",
-          "escorting",
-          "narrating",
-          "asking_question",
-          "evaluating_answer",
-          "monitoring_objective",
-          "climax_recap",
-        ];
-
-        return resumableStates.includes(session.status) && ageMs(session) < MID_LESSON_GRACE_MS;
+        return ageMs(session) < QUEUED_GRACE_MS;
       })
       .sort((left, right) => {
         const leftAt = Date.parse(left.updatedAt ?? left.createdAt ?? "");
@@ -208,34 +195,36 @@ export class SessionFileRepository {
   }
 
   async claim(sessionId: string, botUsername: string): Promise<SessionState | null> {
-    const session = await this.load(sessionId);
-    if (!session) {
-      return null;
-    }
+    return this.withClaimLock(sessionId, async () => {
+      const session = await this.load(sessionId);
+      if (!session) {
+        return null;
+      }
 
-    if (session.claimedBy && session.claimedBy !== botUsername) {
-      return null;
-    }
+      if (session.claimedBy && session.claimedBy !== botUsername) {
+        return null;
+      }
 
-    const claimed: SessionState = {
-      ...session,
-      claimedBy: botUsername,
-      claimedAt: new Date().toISOString(),
-      status: session.status === "queued" ? "building_scene" : session.status,
-    };
+      const claimed: SessionState = {
+        ...session,
+        claimedBy: botUsername,
+        claimedAt: new Date().toISOString(),
+        status: session.status === "queued" ? "building_scene" : session.status,
+      };
 
-    await this.save(claimed);
-    await this.appendEvent({
-      type: "status",
-      sessionId,
-      at: new Date().toISOString(),
-      payload: {
-        status: claimed.status,
-        message: `${botUsername} claimed the session and is preparing the scene.`,
-      },
+      await this.save(claimed);
+      await this.appendEvent({
+        type: "status",
+        sessionId,
+        at: new Date().toISOString(),
+        payload: {
+          status: claimed.status,
+          message: `${botUsername} claimed the session and is preparing the scene.`,
+        },
+      });
+
+      return claimed;
     });
-
-    return claimed;
   }
 
   private toSharedEvent(event: SessionEvent): Record<string, unknown> {
@@ -318,6 +307,52 @@ export class SessionFileRepository {
       }
 
       throw error;
+    }
+  }
+
+  private async withClaimLock<T>(sessionId: string, task: () => Promise<T>): Promise<T | null> {
+    const lockPath = this.getClaimLockPath(sessionId);
+    await fs.mkdir(this.getSessionDir(sessionId), { recursive: true });
+
+    let lockHandle: Awaited<ReturnType<typeof fs.open>> | null = null;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        lockHandle = await fs.open(lockPath, "wx");
+        break;
+      } catch (error) {
+        const errno = (error as NodeJS.ErrnoException).code;
+        if (errno !== "EEXIST") {
+          throw error;
+        }
+
+        if (attempt === 0) {
+          try {
+            const stats = await fs.stat(lockPath);
+            const ageMs = Date.now() - stats.mtimeMs;
+            if (ageMs > 45_000) {
+              await fs.unlink(lockPath);
+              continue;
+            }
+          } catch (statError) {
+            if ((statError as NodeJS.ErrnoException).code !== "ENOENT") {
+              throw statError;
+            }
+            continue;
+          }
+        }
+        return null;
+      }
+    }
+
+    if (!lockHandle) {
+      return null;
+    }
+
+    try {
+      return await task();
+    } finally {
+      await lockHandle.close().catch(() => undefined);
+      await fs.unlink(lockPath).catch(() => undefined);
     }
   }
 }

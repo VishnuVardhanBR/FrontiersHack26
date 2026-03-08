@@ -75,6 +75,44 @@ const asStringArray = (value: unknown, fallback: string[]): string[] => {
   return next.length > 0 ? next : fallback;
 };
 
+const EMPTY_CHAPTER_TEXT_PLACEHOLDER =
+  "No readable chapter text was extracted. Build a concise middle-school history lesson from teacher options.";
+
+const normalizeChapterText = (text: string): string =>
+  text.trim() || EMPTY_CHAPTER_TEXT_PLACEHOLDER;
+
+const padWithFallback = <T>(items: T[], minimumLength: number, fallback: readonly T[]): T[] => {
+  const next = [...items];
+  if (next.length >= minimumLength || fallback.length === 0) {
+    return next;
+  }
+
+  while (next.length < minimumLength) {
+    next.push(fallback[Math.min(next.length, fallback.length - 1)]!);
+  }
+
+  return next;
+};
+
+const asBoundedStringArray = (
+  value: unknown,
+  fallback: string[],
+  minimumLength: number,
+  maximumLength: number,
+): string[] =>
+  padWithFallback(
+    asStringArray(value, fallback).slice(0, maximumLength),
+    minimumLength,
+    fallback,
+  ).slice(0, maximumLength);
+
+const asStringArrayWithMinLength = (
+  value: unknown,
+  fallback: string[],
+  minimumLength: number,
+): string[] =>
+  padWithFallback(asStringArray(value, fallback), minimumLength, fallback);
+
 const asIntegerInRange = (value: unknown, fallback: number, min: number, max: number): number => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) {
@@ -141,7 +179,11 @@ const repairExperiencePackage = (raw: unknown, fallback: ExperiencePackage): Exp
   const rawTriggers = Array.isArray(root.triggerPlan) ? root.triggerPlan : [];
   const rawSuccessConditions = Array.isArray(root.successConditions) ? root.successConditions : [];
 
-  const regions = (rawRegions.length > 0 ? rawRegions : fallback.sceneSpec.regions)
+  const regions = padWithFallback(
+    rawRegions.length > 0 ? rawRegions : fallback.sceneSpec.regions,
+    3,
+    fallback.sceneSpec.regions,
+  )
     .slice(0, 5)
     .map((region, index) => {
       const value = asRecord(region);
@@ -164,7 +206,11 @@ const repairExperiencePackage = (raw: unknown, fallback: ExperiencePackage): Exp
       } satisfies SceneRegion;
     });
 
-  const questions = (rawQuestions.length > 0 ? rawQuestions : fallback.questionPlan)
+  const questions = padWithFallback(
+    rawQuestions.length > 0 ? rawQuestions : fallback.questionPlan,
+    MIN_QUESTION_COUNT,
+    fallback.questionPlan,
+  )
     .slice(0, 5)
     .map((question, index) => {
       const value = asRecord(question);
@@ -182,8 +228,13 @@ const repairExperiencePackage = (raw: unknown, fallback: ExperiencePackage): Exp
       } satisfies QuestionPlan;
     });
 
-  const mappedDialoguePlan = (rawDialogue.length > 0 ? rawDialogue : fallback.dialoguePlan)
-    .slice(0, Math.max(3, regions.length))
+  const dialogueCount = Math.max(3, regions.length);
+  const dialoguePlan = padWithFallback(
+    rawDialogue.length > 0 ? rawDialogue : fallback.dialoguePlan,
+    dialogueCount,
+    fallback.dialoguePlan,
+  )
+    .slice(0, dialogueCount)
     .map((dialogue, index) => {
       const value = asRecord(dialogue);
       const fallbackDialogue = fallback.dialoguePlan[Math.min(index, fallback.dialoguePlan.length - 1)]!;
@@ -200,15 +251,11 @@ const repairExperiencePackage = (raw: unknown, fallback: ExperiencePackage): Exp
       } satisfies DialogueBeat;
     });
 
-  // Schema requires at least 3 dialogue beats.
-  const dialoguePlan: ExperiencePackage["dialoguePlan"] = mappedDialoguePlan.length >= 3
-    ? mappedDialoguePlan
-    : [
-        ...mappedDialoguePlan,
-        ...fallback.dialoguePlan.slice(mappedDialoguePlan.length, 3),
-      ];
-
-  const mappedTriggerPlan = (rawTriggers.length > 0 ? rawTriggers : fallback.triggerPlan)
+  const triggerPlan = padWithFallback(
+    rawTriggers.length > 0 ? rawTriggers : fallback.triggerPlan,
+    2,
+    fallback.triggerPlan,
+  )
     .slice(0, 5)
     .map((trigger, index) => {
       const value = asRecord(trigger);
@@ -226,15 +273,11 @@ const repairExperiencePackage = (raw: unknown, fallback: ExperiencePackage): Exp
       } satisfies TriggerPlan;
     });
 
-  // Schema requires at least 2 triggers.
-  const triggerPlan: ExperiencePackage["triggerPlan"] = mappedTriggerPlan.length >= 2
-    ? mappedTriggerPlan
-    : [
-        ...mappedTriggerPlan,
-        ...fallback.triggerPlan.slice(mappedTriggerPlan.length, 2),
-      ];
-
-  const mappedSuccessConditions = (rawSuccessConditions.length > 0 ? rawSuccessConditions : fallback.successConditions)
+  const successConditions = padWithFallback(
+    rawSuccessConditions.length > 0 ? rawSuccessConditions : fallback.successConditions,
+    2,
+    fallback.successConditions,
+  )
     .slice(0, 5)
     .map((condition, index) => {
       if (typeof condition === "string") {
@@ -252,21 +295,13 @@ const repairExperiencePackage = (raw: unknown, fallback: ExperiencePackage): Exp
       } satisfies ExperiencePackage["successConditions"][number];
     });
 
-  // Schema requires at least 2 successConditions — pad with fallback entries if Gemini returned fewer.
-  const successConditions: ExperiencePackage["successConditions"] = mappedSuccessConditions.length >= 2
-    ? mappedSuccessConditions
-    : [
-        ...mappedSuccessConditions,
-        ...fallback.successConditions.slice(mappedSuccessConditions.length, 2),
-      ];
-
   return ExperiencePackageSchema.parse({
     ...fallback,
     experienceId: asNonEmptyString(root.experienceId, fallback.experienceId),
     title: asNonEmptyString(root.title, fallback.title),
     gradeBand: root.gradeBand === "middle_school" ? root.gradeBand : fallback.gradeBand,
     durationMinutes: asIntegerInRange(root.durationMinutes, fallback.durationMinutes, 5, 7),
-    learningObjectives: asStringArray(root.learningObjectives, fallback.learningObjectives),
+    learningObjectives: asBoundedStringArray(root.learningObjectives, fallback.learningObjectives, 2, 5),
     historicalSummary: asNonEmptyString(root.historicalSummary, fallback.historicalSummary),
     creativeLicense: {
       enabled:
@@ -293,7 +328,7 @@ const repairExperiencePackage = (raw: unknown, fallback: ExperiencePackage): Exp
     questionPlan: questions,
     triggerPlan,
     successConditions,
-    fallbackHints: asStringArray(root.fallbackHints, fallback.fallbackHints),
+    fallbackHints: asStringArrayWithMinLength(root.fallbackHints, fallback.fallbackHints, 2),
     sourceExcerpt: asNonEmptyString(root.sourceExcerpt, fallback.sourceExcerpt),
   });
 };
@@ -303,9 +338,10 @@ const fallbackExperiencePackage = ({
   chapterText,
   teacherOptions,
 }: PlanExperienceInput): ExperiencePackage => {
-  const sentences = sentenceSplit(chapterText);
-  const excerpt = sentences.slice(0, 5).join(" ").slice(0, 1200) || chapterText.slice(0, 1200);
-  const keywords = pickKeywords(chapterText);
+  const safeChapterText = normalizeChapterText(chapterText);
+  const sentences = sentenceSplit(safeChapterText);
+  const excerpt = sentences.slice(0, 5).join(" ").slice(0, 1200) || safeChapterText.slice(0, 1200);
+  const keywords = pickKeywords(safeChapterText);
   const leadKeyword = startCase(keywords[0] ?? teacherOptions.topic);
   const secondaryKeyword = startCase(keywords[1] ?? "Daily Life");
   const theme = teacherOptions.topic || leadKeyword;
@@ -347,7 +383,7 @@ const fallbackExperiencePackage = ({
 
   const questions = Array.from({ length: questionCount }, (_, index) => {
     const concept = startCase(keywords[index] ?? keywords[0] ?? "the main event");
-    const fallbackSentence = sentences[index + 1] ?? sentences[0] ?? chapterText.slice(0, 200);
+    const fallbackSentence = sentences[index + 1] ?? sentences[0] ?? safeChapterText.slice(0, 200);
     return {
       id: `question_${index + 1}`,
       regionId: index < questionCount - 1 ? regions[Math.min(index, regions.length - 1)]!.id : "climax_ridge",
@@ -457,23 +493,28 @@ export class ExperiencePlannerService {
   }
 
   async planExperience(input: PlanExperienceInput): Promise<ExperiencePackage> {
+    const normalizedInput: PlanExperienceInput = {
+      ...input,
+      chapterText: normalizeChapterText(input.chapterText),
+    };
+
     if (!config.geminiApiKey || config.disableGemini) {
       warn("planner", "Gemini disabled — using fallback experience package");
-      return fallbackExperiencePackage(input);
+      return fallbackExperiencePackage(normalizedInput);
     }
 
-    log("planner", `session ${input.sessionId} | topic: "${input.teacherOptions.topic}" | text: ${input.chapterText.length} chars | model: ${config.geminiModelPlanner}`);
+    log("planner", `session ${normalizedInput.sessionId} | topic: "${normalizedInput.teacherOptions.topic}" | text: ${normalizedInput.chapterText.length} chars | model: ${config.geminiModelPlanner}`);
 
-    const fallback = fallbackExperiencePackage(input);
+    const fallback = fallbackExperiencePackage(normalizedInput);
     const systemInstruction = await this.loadPrompt();
     const userPrompt = [
-      `Topic: ${input.teacherOptions.topic}`,
-      `Grade level: ${input.teacherOptions.gradeLevel}`,
-      `Preferred question count: ${input.teacherOptions.questionCount}`,
-      `Objective emphasis: ${input.teacherOptions.objectiveEmphasis}`,
+      `Topic: ${normalizedInput.teacherOptions.topic}`,
+      `Grade level: ${normalizedInput.teacherOptions.gradeLevel}`,
+      `Preferred question count: ${normalizedInput.teacherOptions.questionCount}`,
+      `Objective emphasis: ${normalizedInput.teacherOptions.objectiveEmphasis}`,
       "",
       "Chapter text:",
-      input.chapterText.slice(0, 12000),
+      normalizedInput.chapterText.slice(0, 12000),
     ].join("\n");
 
     const raw = await this.geminiClient.generateRawJSON(

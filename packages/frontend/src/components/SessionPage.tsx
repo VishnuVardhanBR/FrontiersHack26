@@ -148,7 +148,7 @@ export const SessionPage = () => {
           </div>
 
           <div className="space-y-4">
-            <ChatLog session={session} streamEvents={streamEvents} />
+            <ChatLog session={session} />
             {id ? <VoicePanel sessionId={id} /> : null}
           </div>
         </section>

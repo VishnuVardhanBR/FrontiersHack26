@@ -453,36 +453,96 @@ export const normalizeSession = (value: unknown): SessionRecord => {
   };
 };
 
-export const normalizeStreamEvent = (eventType: string, value: unknown): StreamEnvelope => {
+const stableSerialize = (value: unknown): string => {
+  if (value === null || typeof value !== 'object') {
+    const serialized = JSON.stringify(value);
+    return serialized === undefined ? 'null' : serialized;
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableSerialize(item)).join(',')}]`;
+  }
+
+  const entries = Object.entries(value as Record<string, unknown>).sort(([left], [right]) =>
+    left.localeCompare(right),
+  );
+  return `{${entries.map(([key, item]) => `${JSON.stringify(key)}:${stableSerialize(item)}`).join(',')}}`;
+};
+
+const hashString = (value: string): string => {
+  let hash = 2166136261;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return (hash >>> 0).toString(36);
+};
+
+const buildEventFingerprintId = (event: {
+  type: string;
+  timestamp: string;
+  sessionId?: string;
+  message?: string;
+  payload?: unknown;
+}) =>
+  `evt_${hashString(
+    stableSerialize({
+      type: event.type,
+      timestamp: event.timestamp,
+      sessionId: event.sessionId ?? null,
+      message: event.message ?? null,
+      payload: event.payload ?? null,
+    }),
+  )}`;
+
+export const normalizeStreamEvent = (
+  eventType: string,
+  value: unknown,
+  defaultSessionId?: string,
+): StreamEnvelope => {
   const record = isRecord(value) ? value : {};
   const inferredType =
     typeof record.type === 'string' ? record.type : eventType === 'message' ? 'session_update' : eventType;
+  const timestamp = typeof record.timestamp === 'string' ? record.timestamp : new Date().toISOString();
+  const sessionId =
+    typeof record.sessionId === 'string'
+      ? record.sessionId
+      : typeof record.session_id === 'string'
+        ? record.session_id
+        : defaultSessionId;
+  const message =
+    typeof record.message === 'string'
+      ? record.message
+      : isRecord(record.data) && typeof record.data.message === 'string'
+        ? record.data.message
+      : typeof record.text === 'string'
+        ? record.text
+        : undefined;
   const payload =
     isRecord(record.data) || Array.isArray(record.data)
       ? record.data
       : isRecord(record.payload) || Array.isArray(record.payload)
         ? record.payload
         : record;
+  const id =
+    typeof record.id === 'string'
+      ? record.id
+      : buildEventFingerprintId({
+          type: inferredType,
+          timestamp,
+          sessionId,
+          message,
+          payload,
+        });
 
   return {
-    id: typeof record.id === 'string' ? record.id : crypto.randomUUID(),
-    sessionId:
-      typeof record.sessionId === 'string'
-        ? record.sessionId
-        : typeof record.session_id === 'string'
-          ? record.session_id
-          : undefined,
+    id,
+    sessionId,
     type: inferredType,
-    timestamp:
-      typeof record.timestamp === 'string' ? record.timestamp : new Date().toISOString(),
-    message:
-      typeof record.message === 'string'
-        ? record.message
-        : isRecord(record.data) && typeof record.data.message === 'string'
-          ? record.data.message
-        : typeof record.text === 'string'
-          ? record.text
-          : undefined,
+    timestamp,
+    message,
     payload,
   };
 };

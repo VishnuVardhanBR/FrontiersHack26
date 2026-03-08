@@ -101,6 +101,7 @@ export const createBuildSceneState = (): TutorState => ({
       await ctx.persistState(
         {
           status: "error",
+          errorMessage: message,
           runtime: {
             ...ctx.session.runtime,
             currentState: "BUILD_SCENE",

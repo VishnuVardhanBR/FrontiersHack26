@@ -69,7 +69,17 @@ uploadRouter.post("/", upload.single("file"), async (req, res, next) => {
       },
     });
 
-    const extractedText = await documentExtractorService.extractText(req.file);
+    const extractedText = (await documentExtractorService.extractText(req.file)).trim();
+    if (!extractedText) {
+      const message = "No readable text could be extracted from the uploaded file.";
+      await botBridgeService.failSession(session.id, message);
+      res.status(422).json({
+        error: message,
+        sessionId: session.id,
+      });
+      return;
+    }
+
     await sessionService.saveSourceText(session.id, extractedText);
 
     const experiencePackage = await experiencePlannerService.planExperience({

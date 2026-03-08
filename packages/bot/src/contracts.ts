@@ -170,6 +170,7 @@ export interface TeacherSettings {
 export interface SessionState {
   id: string;
   status: string;
+  errorMessage?: string;
   teacherSettings?: TeacherSettings;
   uploadedText?: string;
   experiencePackage: ExperiencePackage;
@@ -404,6 +405,7 @@ export const normalizeSessionState = (input: unknown, idHint = "session"): Sessi
   return {
     id: String(raw.id ?? raw.sessionId ?? idHint),
     status: String(raw.status ?? "queued"),
+    errorMessage: typeof raw.errorMessage === "string" ? raw.errorMessage : undefined,
     teacherSettings:
       raw.teacherOptions && typeof raw.teacherOptions === "object"
         ? (raw.teacherOptions as TeacherSettings)

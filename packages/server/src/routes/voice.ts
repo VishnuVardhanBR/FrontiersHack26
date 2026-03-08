@@ -6,12 +6,13 @@ import { Router } from "express";
 import { config } from "../config.js";
 import { GeminiClient } from "../gemini/client.js";
 import { log } from "../log.js";
+import { validateSessionIdParam } from "./session-id.middleware.js";
 
 export const voiceRouter = Router();
 
 const geminiClient = new GeminiClient();
 
-voiceRouter.post("/sessions/:id/voice-input", async (req, res, next) => {
+voiceRouter.post("/sessions/:id/voice-input", validateSessionIdParam, async (req, res, next) => {
   try {
     const { id } = req.params;
     const { transcript } = req.body as { transcript?: string; username?: string };

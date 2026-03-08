@@ -2,8 +2,11 @@ import { Router } from "express";
 
 import { botBridgeService, sessionService } from "../services/app-services.js";
 import { log } from "../log.js";
+import { validateSessionIdParam } from "./session-id.middleware.js";
 
 export const sessionRouter = Router();
+
+sessionRouter.use("/:id", validateSessionIdParam);
 
 sessionRouter.get("/:id", async (req, res, next) => {
   try {

@@ -14,12 +14,12 @@ QuizCraft turns a teacher-uploaded history chapter into a short Minecraft learni
 
 - Node.js 20+
 - Java 21+ for the Minecraft server jar
-- Minecraft server jar available at `/Users/vishnuvardhan/Downloads/server.jar` or override `MC_SERVER_JAR_SOURCE`
-- Optional Gemini key in `.env` as `GEMINI_API_KEY`
+- Minecraft server jar available at `./server.jar` (repo root) or override `MC_SERVER_JAR_SOURCE`
+- Gemini key in `.env` as `GEMINI_API_KEY` (world build is disabled without it)
 
 ## Setup
 
-1. Copy `.env.example` to `.env` and add `GEMINI_API_KEY` if you want Gemini planning instead of the built-in fallback planner.
+1. Copy `.env.example` to `.env` and set `GEMINI_API_KEY`.
 2. Install dependencies:
 
 ```bash

@@ -27,3 +27,9 @@ mc-server/world_the_end
 packages/frontend/.vite
 *.tsbuildinfo
 .logs/
+
+minecraftlm/backend/.env
+minecraftlm/backend/.venv
+minecraftlm/backend/.storage
+minecraftlm/frontend/node_modules
+__pycache__

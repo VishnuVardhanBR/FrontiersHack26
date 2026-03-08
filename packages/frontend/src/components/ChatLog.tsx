@@ -1,64 +1,25 @@
 import { useDeferredValue, useEffect, useRef } from 'react';
 import { Bot, FlaskConical, UserRound } from 'lucide-react';
 
-import type { ChatEntry, SessionRecord, StreamEnvelope } from '@/lib/types';
+import type { ChatEntry, SessionRecord } from '@/lib/types';
 
 interface ChatLogProps {
   session: SessionRecord | null;
-  streamEvents: StreamEnvelope[];
 }
 
-interface FeedItem {
-  id: string;
+interface FeedItem extends ChatEntry {
   kind: 'chat' | 'system';
-  speaker: ChatEntry['speaker'];
-  message: string;
-  timestamp: string;
 }
 
-const systemEventTypes = new Set([
-  'status',
-  'state_changed',
-  'build_progress',
-  'error',
-  'session_complete',
-  'summary_ready',
-  'experience_ready',
-  'build_plan_ready',
-]);
-
-export const ChatLog = ({ session, streamEvents }: ChatLogProps) => {
+export const ChatLog = ({ session }: ChatLogProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const chatItems = (session?.chatLog ?? []).map((entry) => ({
-    id: entry.id,
-    kind: 'chat' as const,
-    speaker: entry.speaker,
-    message: entry.message,
-    timestamp: entry.timestamp,
-  }));
-  const systemItems = streamEvents
-    .filter((event) => systemEventTypes.has(event.type))
-    .map((event) => ({
-      id: event.id,
-      kind: 'system' as const,
-      speaker: 'system' as const,
-      message:
-        event.message ??
-        (event.type === 'build_progress'
-          ? 'Scene construction advanced.'
-          : event.type === 'state_changed'
-            ? 'Tutor state updated.'
-            : event.type === 'summary_ready'
-              ? 'Session summary is ready.'
-              : event.type === 'session_complete'
-                ? 'Session complete.'
-                : 'System update.'),
-      timestamp: event.timestamp,
-    }));
-  const feed = [...chatItems, ...systemItems].sort((left, right) =>
-    left.timestamp.localeCompare(right.timestamp),
-  );
+  const feed = (session?.chatLog ?? [])
+    .map((entry) => ({
+      ...entry,
+      kind: entry.speaker === 'system' ? ('system' as const) : ('chat' as const),
+    }))
+    .sort((left, right) => left.timestamp.localeCompare(right.timestamp));
 
   const deferredFeed = useDeferredValue(feed);
 

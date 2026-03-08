@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 
 import { config, frontendOrigins } from "./config.js";
+import { errorHandler } from "./http/errors.js";
 import { internalRouter } from "./routes/internal.js";
 import { sessionRouter } from "./routes/session.js";
 import { streamRouter } from "./routes/stream.js";
@@ -36,10 +37,7 @@ app.use("/api/sessions", streamRouter);
 app.use("/api", voiceRouter);
 app.use("/internal", internalRouter);
 
-app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  const message = error instanceof Error ? error.message : "Unexpected server error.";
-  res.status(500).json({ error: message });
-});
+app.use(errorHandler);
 
 app.listen(config.serverPort, config.serverHost, () => {
   console.log(`QuizCraft server listening on http://${config.serverHost}:${config.serverPort}`);

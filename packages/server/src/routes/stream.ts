@@ -2,6 +2,7 @@ import type { Response } from "express";
 import { Router } from "express";
 
 import { sessionService } from "../services/app-services.js";
+import { validateSessionIdParam } from "./session-id.middleware.js";
 
 const writeEvent = (
   res: Response,
@@ -17,7 +18,7 @@ const writeEvent = (
 
 export const streamRouter = Router();
 
-streamRouter.get("/:id/stream", async (req, res, next) => {
+streamRouter.get("/:id/stream", validateSessionIdParam, async (req, res, next) => {
   try {
     const session = await sessionService.getSession(req.params.id);
     if (!session) {

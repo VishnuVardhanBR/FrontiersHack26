@@ -10,6 +10,7 @@ import { Router } from "express";
 import { z } from "zod";
 
 import { botBridgeService, sessionService } from "../services/app-services.js";
+import { validateSessionIdParam } from "./session-id.middleware.js";
 
 const BotSessionPatchSchema = z.object({
   title: z.string().min(1).optional(),
@@ -52,7 +53,7 @@ internalRouter.get("/bot/next-session", async (req, res, next) => {
   }
 });
 
-internalRouter.post("/bot/sessions/:id/update", async (req, res, next) => {
+internalRouter.post("/bot/sessions/:id/update", validateSessionIdParam, async (req, res, next) => {
   try {
     const body = BotUpdateSchema.parse(req.body);
     const sessionId = req.params.id;
@@ -75,13 +76,13 @@ internalRouter.post("/bot/sessions/:id/update", async (req, res, next) => {
 
     if (body.summary) {
       await botBridgeService.completeSession(sessionId, body.summary);
-    } else if (body.status && body.statusMessage) {
-      await botBridgeService.updateStatus(sessionId, body.status, body.statusMessage, body.patch ?? {});
     } else if (body.status === "error") {
       await botBridgeService.failSession(
         sessionId,
         body.statusMessage ?? body.patch?.errorMessage ?? "The tutor bot reported an unexpected error.",
       );
+    } else if (body.status && body.statusMessage) {
+      await botBridgeService.updateStatus(sessionId, body.status, body.statusMessage, body.patch ?? {});
     }
 
     const session = await sessionService.getSession(sessionId);

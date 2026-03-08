@@ -1,9 +1,13 @@
 level-type=minecraft\:flat
+generator-settings={"layers":[{"block":"minecraft\:bedrock","height":1}],"biome":"minecraft\:plains","features":false,"structures":false}
 gamemode=creative
 difficulty=peaceful
 online-mode=false
 enforce-secure-profile=false
 spawn-protection=0
+spawn-monsters=false
+spawn-animals=false
+spawn-npcs=false
 enable-command-block=true
 pvp=false
 generate-structures=false

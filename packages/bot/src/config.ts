@@ -41,7 +41,10 @@ export interface BotConfig {
   readonly routeRadius: number;
   readonly geminiApiKey?: string;
   readonly geminiModelWorld: string;
+  readonly geminiThinkingBudget: number;
   readonly resumeIncompleteSessions: boolean;
+  readonly minecraftlmUrl: string;
+  readonly useMinecraftLM: boolean;
   readonly sessionId?: string;
 }
 
@@ -57,6 +60,9 @@ export const botConfig: BotConfig = {
   routeRadius: parseNumber(process.env.QUIZCRAFT_ROUTE_RADIUS, 4),
   geminiApiKey: process.env.GEMINI_API_KEY,
   geminiModelWorld: process.env.GEMINI_MODEL_WORLD ?? "gemini-2.0-flash",
+  geminiThinkingBudget: Math.max(0, parseNumber(process.env.GEMINI_THINKING_BUDGET, 1024)),
   resumeIncompleteSessions: parseBoolean(process.env.QUIZCRAFT_RESUME_INCOMPLETE_SESSIONS, false),
+  minecraftlmUrl: process.env.MINECRAFTLM_URL ?? "http://127.0.0.1:8000",
+  useMinecraftLM: parseBoolean(process.env.USE_MINECRAFTLM, true),
   sessionId: process.env.QUIZCRAFT_SESSION_ID,
 };
